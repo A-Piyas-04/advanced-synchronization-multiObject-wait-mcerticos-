@@ -126,3 +126,75 @@ void test_limits() {
 - Timer resolution is tied to the system timer tick.
 - "Ready" state is binary; doesn't indicate *which* source triggered if multiple sources were supported.
 - Fixed number of wait objects (64) and sources (8).
+
+## Implementation Details (Edited/Added Files)
+
+The following files were modified or created to implement the project:
+
+### 1. Kernel Synchronization (`kern/sync/`)
+*   **`waitobj.h`**: Added `wait_object_t` structure, constants (`WAITOBJ_MAX`, `WAITOBJ_SRC_TIMER`), and function prototypes.
+*   **`waitobj.c`**: Implemented the core logic:
+    *   `waitobj_init`: Initializes the global wait object table.
+    *   `waitobj_create`: Finds a free slot in the table and initializes it.
+    *   `waitobj_add`: Adds a notification source to a wait object.
+    *   `waitobj_wait`: Sleeps the thread if the object is not ready.
+    *   `waitobj_notify_timer`: Scans all objects and wakes up threads waiting on timers.
+    *   `waitobj_cleanup_owner`: Frees all wait objects owned by a specific process.
+
+### 2. System Calls & Traps (`kern/trap/`)
+*   **`TSyscall/TSyscall.c`**: Implemented the system call handlers:
+    *   `sys_waitobj_create`: Wrapper for `waitobj_create`.
+    *   `sys_waitobj_add`: Wrapper for `waitobj_add`.
+    *   `sys_waitobj_wait`: Wrapper for `waitobj_wait`.
+    *   `sys_exit`: New syscall that calls `waitobj_cleanup_owner` and `thread_exit`.
+*   **`TDispatch/TDispatch.c`**: Added dispatch case for `SYS_exit`.
+*   **`TTrapHandler/TTrapHandler.c`**: Modified `timer_intr_handler` to call `waitobj_notify_timer()`.
+*   **`TSyscall/export.h`, `import.h`**: Updated to export/import necessary functions.
+
+### 3. Thread Management (`kern/thread/`)
+*   **`PThread/PThread.c`**: Added `thread_exit()` function to handle thread termination (sets state to `TSTATE_DEAD` and switches context).
+*   **`PThread/export.h`**: Exported `thread_exit`.
+
+### 4. User Space (`user/`)
+*   **`include/syscall.h`**: Added inline assembly wrappers for `sys_waitobj_*` and `sys_exit`.
+*   **`wait_demo/wait_demo.c`**: Created a test program that demonstrates creating a wait object, adding a timer source, and waiting for events.
+*   **`shell/commands.c`**: Added `cmd_waitdemo` to launch the test program.
+*   **`shell/shell.c`**: Registered the `waitdemo` command.
+
+## Detailed Code Flow
+
+### Creation Flow
+1.  **User**: Calls `sys_waitobj_create()`.
+2.  **Trap**: `int 48` triggers `trap()` -> `syscall_dispatch()`.
+3.  **Kernel**: Calls `sys_waitobj_create()` in `TSyscall.c`.
+4.  **WaitObj**: `waitobj_create()` locks the table, finds a free slot, marks it used, and returns the index (WOID).
+5.  **Return**: WOID is returned to user space.
+
+### Wait Flow
+1.  **User**: Calls `sys_waitobj_wait(woid)`.
+2.  **Trap**: `int 48` triggers `trap()` -> `syscall_dispatch()`.
+3.  **Kernel**: Calls `sys_waitobj_wait()` in `TSyscall.c`.
+4.  **WaitObj**: `waitobj_wait()` checks `wo->ready`.
+    *   **If Ready**: Returns immediately.
+    *   **If Not Ready**: Calls `thread_sleep(wo, &wo->lock)`.
+        *   Sets thread state to `TSTATE_SLEEP`.
+        *   Sets thread channel to `wo`.
+        *   Calls `kctx_switch` to run the next thread.
+
+### Notification Flow (Timer)
+1.  **Hardware**: Timer interrupt triggers `trap()` with `T_IRQ0 + IRQ_TIMER`.
+2.  **Trap**: Calls `timer_intr_handler()`.
+3.  **Handler**: Calls `waitobj_notify_timer()`.
+4.  **WaitObj**: Iterates over all wait objects.
+    *   Checks if object has `WAITOBJ_SRC_TIMER`.
+    *   If yes, sets `wo->ready = 1`.
+    *   Calls `thread_wakeup(wo)`.
+5.  **Scheduler**: `thread_wakeup` finds all threads sleeping on channel `wo`, sets them to `TSTATE_READY`, and enqueues them.
+6.  **Resume**: Eventually the scheduler picks the thread, and it returns from `waitobj_wait`.
+
+### Exit Flow
+1.  **User**: Calls `sys_exit()` (or `wait_demo` finishes).
+2.  **Trap**: `int 48` triggers `trap()` -> `syscall_dispatch()`.
+3.  **Kernel**: Calls `sys_exit()` in `TSyscall.c`.
+4.  **Cleanup**: Calls `waitobj_cleanup_owner(pid)` to free wait objects.
+5.  **Termination**: Calls `thread_exit()` to mark thread as `TSTATE_DEAD` and switch away permanently.
