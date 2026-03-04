@@ -2,6 +2,7 @@
 #include <lib/thread.h>
 #include <lib/spinlock.h>
 #include <thread/PCurID/export.h>
+#include <thread/PThread/export.h>
 
 #include <kern/sync/waitobj.h>
 
