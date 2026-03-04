@@ -211,6 +211,13 @@ void sys_waitobj_add(tf_t *tf)
     }
 }
 
+void sys_exit(tf_t *tf)
+{
+    unsigned int cur_pid = get_curid();
+    waitobj_cleanup_owner((int) cur_pid);
+    thread_exit();
+}
+
 void sys_waitobj_wait(tf_t *tf)
 {
     int woid = (int) syscall_get_arg2(tf);

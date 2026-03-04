@@ -1,0 +1,344 @@
+You are a systems programming assistant helping implement a kernel feature in **mCertiKOS / OS-Labs template**.
+
+The goal is to complete an **undergraduate-level implementation** of a simplified **epoll-like multi-wait synchronization system**.
+
+The project allows a **user thread to wait for multiple notification sources** using a single wait object.
+
+IMPORTANT CONSTRAINTS:
+- ❗ DO NOT run any commands
+- ❗ DO NOT build or compile
+- ❗ DO NOT run make
+- ❗ DO NOT run tests
+- ❗ DO NOT execute the kernel
+- ❗ Only analyze code and generate edits
+- ❗ The code is on the user's real machine
+
+You must **ONLY inspect files and generate code changes.**
+
+---
+
+# STEP 1 — ANALYZE CURRENT IMPLEMENTATION
+
+First analyze the repository and determine:
+
+1. What parts of the wait-object system are already implemented.
+2. Which files currently exist (for example):
+   - `waitobj.c`
+   - `waitobj.h`
+   - syscall handlers
+3. Which functions are implemented and which are missing.
+
+Look for functions like:
+
+
+waitobj_init
+waitobj_create
+waitobj_add
+waitobj_wait
+waitobj_notify_timer
+waitobj_cleanup_owner
+
+
+Check if:
+
+- spinlocks are used
+- wait object table exists
+- ready flag logic exists
+- timer notification exists
+- syscall interface exists
+
+Then produce a short summary:
+
+CURRENT IMPLEMENTATION STATUS
+
+Implemented:
+
+...
+
+Missing / incomplete:
+
+...
+
+
+---
+
+# STEP 2 — COMPLETE THE IMPLEMENTATION
+
+Finish the project **at an undergraduate level (not production-level)**.
+
+The design should be simple and readable.
+
+## WAIT OBJECT DESIGN
+
+Each wait object should contain:
+
+
+spinlock
+owner process id
+ready flag
+number of sources
+array of sources
+
+
+Example structure:
+
+
+wait_object {
+spinlock_t lock
+int used
+int owner
+int ready
+int nsources
+wait_event_source sources[MAX_SOURCES]
+}
+
+
+---
+
+# STEP 3 — SYSTEM CALL INTERFACE
+
+Implement or complete these system calls:
+
+
+sys_waitobj_create()
+sys_waitobj_add()
+sys_waitobj_wait()
+
+
+They should map to kernel functions:
+
+
+waitobj_create
+waitobj_add
+waitobj_wait
+
+
+Follow the idea similar to:
+
+
+epoll_create
+epoll_ctl
+epoll_wait
+
+
+---
+
+# STEP 4 — WAITING MODES
+
+The wait function should support:
+
+### Polling mode
+If event already ready → return immediately.
+
+### Sleeping mode
+If event not ready:
+
+
+thread_sleep()
+
+
+When event occurs:
+
+
+thread_wakeup()
+
+
+Use existing scheduler utilities.
+
+---
+
+# STEP 5 — EVENT NOTIFICATION
+
+Implement a notification function such as:
+
+
+waitobj_notify_timer()
+
+
+This function should:
+
+1. Scan wait objects
+2. Check if they contain TIMER source
+3. Mark `ready = 1`
+4. Wake sleeping threads
+
+This should be called from **timer interrupt handler**.
+
+---
+
+# STEP 6 — CLEANUP ON PROCESS EXIT
+
+Ensure:
+
+
+waitobj_cleanup_owner(pid)
+
+
+removes wait objects belonging to a process.
+
+---
+
+# STEP 7 — USER SPACE TEST PROGRAM
+
+Create a user program demonstrating usage.
+
+Example program:
+
+
+wait_demo.c
+
+
+Example flow:
+
+
+int w = waitobj_create();
+
+waitobj_add(w, WAITOBJ_SRC_TIMER);
+
+printf("Waiting...\n");
+
+waitobj_wait(w);
+
+printf("Timer event received\n");
+
+
+---
+
+# STEP 8 — TEST CASES (DO NOT RUN)
+
+Write test cases but **DO NOT execute them**.
+
+Provide example test programs such as:
+
+### Test 1 — basic wait
+
+
+create wait object
+add timer source
+wait
+expect wake after timer interrupt
+
+
+### Test 2 — polling behavior
+
+
+notify event before wait
+call wait
+should return immediately
+
+
+### Test 3 — multiple sources
+
+
+add two sources
+trigger one
+verify wake
+
+
+### Test 4 — resource limits
+
+
+create many wait objects
+ensure MAX_WAITOBJ respected
+
+
+Provide expected output for each test.
+
+---
+
+# STEP 9 — FILES TO MODIFY OR CREATE
+
+Modify only relevant kernel modules.
+
+Possible locations:
+
+
+kern/sync/
+kern/trap/
+kern/thread/
+kern/dev/
+kern/proc/
+user/
+
+
+Create if needed:
+
+
+kern/sync/waitobj.c
+kern/sync/waitobj.h
+user/wait_demo/
+
+
+---
+
+# STEP 10 — DOCUMENTATION
+
+Create a markdown file:
+
+
+PROJECT8_WAIT_OBJECT_IMPLEMENTATION.md
+
+
+Include sections:
+
+
+Problem Overview
+
+Design Idea
+
+Wait Object Structure
+
+System Call Flow
+
+Thread Sleep/Wakeup Mechanism
+
+Timer Notification Mechanism
+
+Module Interactions
+
+Test Programs
+
+Limitations
+
+
+The documentation should be clear enough for an undergraduate OS lab report.
+
+---
+
+# OUTPUT FORMAT
+
+When modifying files:
+
+
+FILE: path/to/file.c
+
+<full code> ```
+
+When creating files:
+
+NEW FILE: path/to/file.c
+
+<full code>
+
+Do not omit code.
+
+FINAL REQUIREMENT
+
+Keep the implementation:
+
+simple
+
+readable
+
+understandable for an undergraduate OS course
+
+similar in spirit to epoll/kqueue but simplified
+
+Focus on correctness and clarity rather than advanced scalability.
+
+REMEMBER:
+
+❗ DO NOT RUN ANYTHING
+❗ DO NOT BUILD
+❗ ONLY GENERATE CODE AND FILE CHANGES
+

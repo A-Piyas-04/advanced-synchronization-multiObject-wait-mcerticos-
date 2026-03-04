@@ -80,6 +80,24 @@ void thread_yield(void)
     }
 }
 
+void thread_exit(void)
+{
+    unsigned int old_cur_pid;
+    unsigned int new_cur_pid;
+
+    spinlock_acquire(&sched_lk);
+
+    old_cur_pid = get_curid();
+    tcb_set_state(old_cur_pid, TSTATE_DEAD);
+
+    new_cur_pid = tqueue_dequeue(NUM_IDS);
+    tcb_set_state(new_cur_pid, TSTATE_RUN);
+    set_curid(new_cur_pid);
+
+    spinlock_release(&sched_lk);
+    kctx_switch(old_cur_pid, new_cur_pid);
+}
+
 void sched_update(void)
 {
     spinlock_acquire(&sched_lk);

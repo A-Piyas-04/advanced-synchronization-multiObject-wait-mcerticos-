@@ -75,6 +75,9 @@ void syscall_dispatch(tf_t *tf)
     case SYS_waitobj_wait:
         sys_waitobj_wait(tf);
         break;
+    case SYS_exit:
+        sys_exit(tf);
+        break;
 
     /** Filesystem calls **/
     case SYS_open:

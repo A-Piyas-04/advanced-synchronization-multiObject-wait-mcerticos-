@@ -28,6 +28,7 @@ int main(int argc, char **argv)
         printf("wait_demo: woke up %d\n", i + 1);
     }
 
+    sys_exit();
     return 0;
 }
 

@@ -12,6 +12,7 @@ void sys_yield(tf_t *tf);
 void sys_waitobj_create(tf_t *tf);
 void sys_waitobj_add(tf_t *tf);
 void sys_waitobj_wait(tf_t *tf);
+void sys_exit(tf_t *tf);
 
 #endif  /* _KERN_ */
 

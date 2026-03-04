@@ -29,6 +29,7 @@ static cmd_t commands[] = {
     INFIX(">", write),
     INFIX(">>", append),
     CMD(pathtest, 0, 0),
+    CMD(waitdemo, 0, 0),
     NULLCMD
 };
 

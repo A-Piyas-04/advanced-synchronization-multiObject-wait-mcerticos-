@@ -101,7 +101,15 @@ static gcc_inline int sys_waitobj_wait(int woid)
                     "b" (woid)
                   : "cc", "memory");
 
-    return errno ? -1 : 0;
+    return errno ? -1 : ret;
+}
+
+static gcc_inline void sys_exit(void)
+{
+    asm volatile ("int %0"
+                  :: "i" (T_SYSCALL),
+                     "a" (SYS_exit)
+                  : "cc", "memory");
 }
 
 static gcc_inline int sys_read(int fd, char *buf, size_t n)

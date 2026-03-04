@@ -28,6 +28,7 @@ err_t cmd_write(int argc, char **argv, int optc, char **optv);
 err_t cmd_append(int argc, char **argv, int optc, char **optv);
 
 err_t cmd_pathtest(int argc, char **argv, int optc, char **optv);
+err_t cmd_waitdemo(int argc, char **argv, int optc, char **optv);
 
 typedef struct {
     const char *name;

@@ -12,6 +12,7 @@ void thread_yield(void);
 void sched_update(void);
 void thread_sleep(void *chan, spinlock_t *lk);
 void thread_wakeup(void *chan);
+void thread_exit(void);
 
 #endif  /* _KERN_ */
 

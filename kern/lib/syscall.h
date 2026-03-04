@@ -44,6 +44,7 @@ enum __syscall_nr {
     SYS_waitobj_create,
     SYS_waitobj_add,
     SYS_waitobj_wait,
+    SYS_exit,
 
     MAX_SYSCALL_NR
 };

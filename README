@@ -12,3 +12,25 @@ List here the following info:
 2. whether you coded this assignment together, and if not, who worked on which part
 3. brief description of what you have implemented
 4. and anything else you would like us to know
+
+--------------------------------------------------------------------------------
+Wait Object Project Testing Instructions
+
+1. Compile and run the kernel in QEMU:
+   $> make qemu
+
+2. Once the kernel boots and you see the shell prompt ($>), run the demo program:
+   $> waitdemo
+
+3. The demo program will create a wait object, add a timer source, and wait 5 times.
+   You should see output similar to:
+   
+   wait_demo running in process 6.
+   wait_demo: waiting on timer events
+   wait_demo: woke up 1
+   wait_demo: woke up 2
+   wait_demo: woke up 3
+   wait_demo: woke up 4
+   wait_demo: woke up 5
+
+4. You can also review PROJECT8_WAIT_OBJECT_IMPLEMENTATION.md for more details.
