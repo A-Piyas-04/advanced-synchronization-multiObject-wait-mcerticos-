@@ -114,19 +114,20 @@ void waitobj_notify_timer(void)
         if (!wo->used)
             continue;
 
-        spinlock_acquire(&wo->lock);
-        for (j = 0; j < wo->nsources; j++) {
-            if (wo->sources[j].type == WAITOBJ_SRC_TIMER) {
-                has_timer = 1;
-                break;
+        if (spinlock_try_acquire(&wo->lock)) {
+            for (j = 0; j < wo->nsources; j++) {
+                if (wo->sources[j].type == WAITOBJ_SRC_TIMER) {
+                    has_timer = 1;
+                    break;
+                }
             }
-        }
-        if (has_timer) {
-            wo->ready = 1;
-            spinlock_release(&wo->lock);
-            thread_wakeup(wo);
-        } else {
-            spinlock_release(&wo->lock);
+            if (has_timer) {
+                wo->ready = 1;
+                spinlock_release(&wo->lock);
+                thread_wakeup(wo);
+            } else {
+                spinlock_release(&wo->lock);
+            }
         }
     }
 }

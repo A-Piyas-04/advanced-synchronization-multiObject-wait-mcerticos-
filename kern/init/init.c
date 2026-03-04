@@ -11,6 +11,7 @@
 #include <thread/PTCBIntro/export.h>
 #include <thread/PTQueueInit/export.h>
 #include <thread/PThread/export.h>
+#include <kern/sync/waitobj.h>
 
 extern uint32_t pcpu_ncpu(void);
 
@@ -53,6 +54,7 @@ static void kern_main_ap(void)
 
 void kern_init(uintptr_t mbi_addr)
 {
+    waitobj_init();
     thread_init(mbi_addr);
     KERN_INFO("[BSP KERN] Kernel initialized.\n");
     kern_main();
