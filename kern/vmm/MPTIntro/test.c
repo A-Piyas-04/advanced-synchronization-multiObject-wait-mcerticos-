@@ -2,55 +2,52 @@
 #include <lib/debug.h>
 #include "export.h"
 
-extern char *PDirPool[NUM_IDS][1024];
+extern char * PDirPool[NUM_IDS][1024];
 extern unsigned int IDPTbl[1024][1024];
 
 int MPTIntro_test1()
 {
-    set_pdir_base(0);
-    if ((unsigned int) PDirPool[0] != rcr3()) {
-        dprintf("test 1.1 failed: (%d != %d)\n",
-                (unsigned int) PDirPool[0], rcr3());
-        return 1;
-    }
-    set_pdir_entry_identity(1, 1);
-    set_pdir_entry(1, 2, 100);
-    if (get_pdir_entry(1, 1) != (unsigned int) IDPTbl[1] + 7) {
-        dprintf("test 1.2 failed: (%d != %d)\n",
-                get_pdir_entry(1, 1), (unsigned int) IDPTbl[1] + 7);
-        return 1;
-    }
-    if (get_pdir_entry(1, 2) != 409607) {
-        dprintf("test 1.3 failed: (%d != 409607)\n", get_pdir_entry(1, 2));
-        return 1;
-    }
-    rmv_pdir_entry(1, 1);
-    rmv_pdir_entry(1, 2);
-    if (get_pdir_entry(1, 1) != 0 || get_pdir_entry(1, 2) != 0) {
-        dprintf("test 1.4 failed: (%d != 0 || %d != 0)\n",
-                get_pdir_entry(1, 1), get_pdir_entry(1, 2));
-        return 1;
-    }
-    dprintf("test 1 passed.\n");
-    return 0;
+  set_pdir_base(0);
+  if ((unsigned int)PDirPool[0] != rcr3()) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  set_pdir_entry_identity(1, 1);
+  set_pdir_entry(1, 2, 100);
+  if (get_pdir_entry(1, 1) != (unsigned int)IDPTbl[1] +   7) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (get_pdir_entry(1, 2) != 409607) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  rmv_pdir_entry(1, 1);
+  rmv_pdir_entry(1, 2);
+  if (get_pdir_entry(1, 1) != 0 || get_pdir_entry(1, 2) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
 
 int MPTIntro_test2()
 {
-    set_pdir_entry(1, 1, 10000);
-    set_ptbl_entry(1, 1, 1, 10000, 259);
-    if (get_ptbl_entry(1, 1, 1) != 40960259) {
-        dprintf("test 2.1 failed: (%d != 40960259)\n", get_ptbl_entry(1, 1, 1));
-        return 1;
-    }
-    rmv_ptbl_entry(1, 1, 1);
-    if (get_ptbl_entry(1, 1, 1) != 0) {
-        dprintf("test 2.2 failed: (%d != 0)\n", get_ptbl_entry(1, 1, 1));
-        return 1;
-    }
-    rmv_pdir_entry(1, 1);
-    dprintf("test 2 passed.\n");
-    return 0;
+  set_pdir_entry(1, 1, 10000);
+  set_ptbl_entry(1, 1, 1, 10000, 259);
+  if (get_ptbl_entry(1, 1, 1) != 40960259) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  rmv_ptbl_entry(1, 1, 1);
+  if (get_ptbl_entry(1, 1, 1) != 0) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  rmv_pdir_entry(1, 1);
+  dprintf("test 2 passed.\n");
+  return 0;
 }
 
 /**
@@ -68,12 +65,12 @@ int MPTIntro_test2()
  */
 int MPTIntro_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_MPTIntro()
 {
-    return MPTIntro_test1() + MPTIntro_test2() + MPTIntro_test_own();
+  return MPTIntro_test1() + MPTIntro_test2() + MPTIntro_test_own();
 }

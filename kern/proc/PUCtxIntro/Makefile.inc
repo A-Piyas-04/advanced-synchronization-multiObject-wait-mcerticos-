@@ -1,8 +1,8 @@
 # -*-Makefile-*-
 
-OBJDIRS	+= $(KERN_OBJDIR)/proc/PUCtxIntro
+OBJDIRS		+= $(KERN_OBJDIR)/proc/PUCtxIntro
 
-KERN_SRCFILES += $(KERN_DIR)/proc/PUCtxIntro/PUCtxIntro.c
+KERN_SRCFILES	+= $(KERN_DIR)/proc/PUCtxIntro/PUCtxIntro.c
 
 $(KERN_OBJDIR)/proc/PUCtxIntro/%.o: $(KERN_DIR)/proc/PUCtxIntro/%.c
 	@echo + $(COMP_NAME)[KERN/proc/PUCtxIntro] $<

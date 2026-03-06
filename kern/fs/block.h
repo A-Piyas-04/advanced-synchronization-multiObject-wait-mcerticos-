@@ -1,4 +1,4 @@
-// Blocks.
+// Blocks. 
 //
 // Block 0 is unused.
 // Block 1 is super block.
@@ -7,10 +7,8 @@
 // Then sb.nblocks data blocks.
 // Then sb.nlog log blocks.
 
-#ifndef _KERN_FS_BLOCK_H_
-#define _KERN_FS_BLOCK_H_
-
-#ifdef _KERN_
+#ifndef _KERN_FS_BLOCKS_H_
+#define _KERN_FS_BLOCKS_H_
 
 #include "dinode.h"
 
@@ -26,6 +24,4 @@ uint32_t block_alloc(uint32_t dev);
 // Free a disk block.
 void block_free(uint32_t dev, uint32_t b);
 
-#endif  /* _KERN_ */
-
-#endif  /* !_KERN_FS_BLOCK_H_ */
+#endif /* !_KERN_FS_BLOCKS_H_ */

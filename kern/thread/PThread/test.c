@@ -7,20 +7,18 @@
 
 int PThread_test1()
 {
-    void *dummy_addr = (void *) 0;
-    unsigned int chid = thread_spawn(dummy_addr, 0, 1000);
-    if (tcb_get_state(chid) != TSTATE_READY) {
-        dprintf("test 1.1 failed: (%d != %d)\n",
-                tcb_get_state(chid), TSTATE_READY);
-        return 1;
-    }
-    if (tqueue_get_tail(NUM_IDS) != chid) {
-        dprintf("test 1.2 failed: (%d != %d)\n",
-                tqueue_get_tail(NUM_IDS), chid);
-        return 1;
-    }
-    dprintf("test 1 passed.\n");
-    return 0;
+  void * dummy_addr = (void *) 0;
+  unsigned int chid = thread_spawn(dummy_addr, 0, 1000);
+  if (tcb_get_state(chid) != TSTATE_READY) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (tqueue_get_tail(NUM_IDS) != chid) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
 
 /**
@@ -38,12 +36,12 @@ int PThread_test1()
  */
 int PThread_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_PThread()
 {
-    return PThread_test1() + PThread_test_own();
+  return PThread_test1() + PThread_test_own();
 }

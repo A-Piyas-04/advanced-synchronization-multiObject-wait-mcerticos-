@@ -5,6 +5,7 @@
 
 unsigned int kctx_new(void *entry, unsigned int id, unsigned int quota);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_THREAD_PKCTXNEW_H_ */
+#endif /* !_KERN_THREAD_PKCTXNEW_H_ */
+

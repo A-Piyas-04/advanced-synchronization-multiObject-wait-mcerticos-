@@ -5,9 +5,9 @@
 
 #include <lib/types.h>
 
-void devinit(uintptr_t mbi_addr);
+void devinit(uintptr_t);
 void devinit_ap(void);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_DEV_DEVINIT_H_ */
+#endif /* !_KERN_DEV_DEVINIT_H_ */

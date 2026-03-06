@@ -3,51 +3,41 @@
 
 int MContainer_test1()
 {
-    if (container_get_quota(0) <= 10000) {
-        dprintf("test 1.1 failed: (%d <= 10000)\n", container_get_quota(0));
-        return 1;
-    }
-    if (container_can_consume(0, 10000) != 1) {
-        dprintf("test 1.2 failed: (%d != 1)\n", container_can_consume(0, 10000));
-        return 1;
-    }
-    if (container_can_consume(0, 10000000) != 0) {
-        dprintf("test 1.3 failed: (%d != 0)\n", container_can_consume(0, 10000000));
-        return 1;
-    }
-    dprintf("test 1 passed.\n");
-    return 0;
+  if (container_get_quota(0) <= 10000) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (container_can_consume(0, 10000) != 1) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (container_can_consume(0, 10000000) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
+
 
 int MContainer_test2()
 {
-    unsigned int old_usage = container_get_usage(0);
-    unsigned int old_nchildren = container_get_nchildren(0);
-    unsigned int chid = container_split(0, 100);
-    if (container_get_quota(chid) != 100
-        || container_get_parent(chid) != 0
-        || container_get_usage(chid) != 0
-        || container_get_nchildren(chid) != 0
-        || container_get_usage(0) != old_usage + 100
-        || container_get_nchildren(0) != old_nchildren + 1) {
-        dprintf("test 2.1 failed:\n"
-                "(%d != 100 || %d != 0 || %d != 0\n"
-                " || %d != 0 || %d != %d || %d != %d)\n",
-                container_get_quota(chid),
-                container_get_parent(chid),
-                container_get_usage(chid),
-                container_get_nchildren(chid),
-                container_get_usage(0), old_usage + 100,
-                container_get_nchildren(0), old_nchildren + 1);
-        return 1;
-    }
-    container_alloc(chid);
-    if (container_get_usage(chid) != 1) {
-        dprintf("test 2.2 failed: (%d != 1)\n", container_get_usage(chid));
-        return 1;
-    }
-    dprintf("test 2 passed.\n");
-    return 0;
+  unsigned int old_usage = container_get_usage(0);
+  unsigned int old_nchildren = container_get_nchildren(0);
+  unsigned int chid = container_split(0, 100);
+  if (container_get_quota(chid) != 100 || container_get_parent(chid) != 0 ||
+      container_get_usage(chid) != 0 || container_get_nchildren(chid) != 0 ||
+      container_get_usage(0) != old_usage + 100 || container_get_nchildren(0) != old_nchildren + 1) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  container_alloc(chid);
+  if (container_get_usage(chid) != 1) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  dprintf("test 2 passed.\n");
+  return 0;
 }
 
 /**
@@ -65,12 +55,12 @@ int MContainer_test2()
  */
 int MContainer_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_MContainer()
 {
-    return MContainer_test1() + MContainer_test2() + MContainer_test_own();
+  return MContainer_test1() + MContainer_test2() + MContainer_test_own();
 }

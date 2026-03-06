@@ -17,6 +17,7 @@ void syscall_set_retval3(tf_t *tf, unsigned int retval);
 void syscall_set_retval4(tf_t *tf, unsigned int retval);
 void syscall_set_retval5(tf_t *tf, unsigned int retval);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_TRAP_TSYSCALLARG_H_ */
+#endif /* !_KERN_TRAP_TSYSCALLARG_H_ */
+

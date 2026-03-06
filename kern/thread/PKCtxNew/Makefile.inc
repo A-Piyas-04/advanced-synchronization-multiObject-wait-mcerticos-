@@ -1,10 +1,10 @@
 # -*-Makefile-*-
 
-OBJDIRS	+= $(KERN_OBJDIR)/thread/PKCtxNew
+OBJDIRS		+= $(KERN_OBJDIR)/thread/PKCtxNew
 
-KERN_SRCFILES += $(KERN_DIR)/thread/PKCtxNew/PKCtxNew.c
+KERN_SRCFILES	+= $(KERN_DIR)/thread/PKCtxNew/PKCtxNew.c
 ifdef TEST
-KERN_SRCFILES += $(KERN_DIR)/thread/PKCtxNew/test.c
+KERN_SRCFILES	+= $(KERN_DIR)/thread/PKCtxNew/test.c
 endif
 
 $(KERN_OBJDIR)/thread/PKCtxNew/%.o: $(KERN_DIR)/thread/PKCtxNew/%.c

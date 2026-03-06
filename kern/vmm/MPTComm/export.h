@@ -4,9 +4,10 @@
 #ifdef _KERN_
 
 void pdir_init(unsigned int mbi_addr);
-unsigned int alloc_ptbl(unsigned int proc_index, unsigned int vaddr);
-void free_ptbl(unsigned int proc_index, unsigned int vaddr);
+unsigned int alloc_ptbl(unsigned int, unsigned int);
+void free_ptbl(unsigned int, unsigned int);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_VMM_MPTCOMM_H_ */
+#endif /* !_KERN_VMM_MPTCOMM_H_ */
+

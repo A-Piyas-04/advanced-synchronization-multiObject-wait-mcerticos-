@@ -15,7 +15,7 @@
 // inodes include book-keeping information that is
 // not stored on disk: ip->ref and ip->flags.
 //
-// An inode and its in-memory representative go through a
+// An inode and its in-memory represtative go through a
 // sequence of states before they can be used by the
 // rest of the file system code.
 //
@@ -63,31 +63,31 @@
 #ifndef _KERN_FS_INODE_H_
 #define _KERN_FS_INODE_H_
 
-#ifdef _KERN_
-
 #include "params.h"
 #include "stat.h"
 #include "dinode.h"
 
-// In-memory copy of an inode
+// Lock the given inode.
+// in-memory copy of an inode
 struct inode {
-    uint32_t dev;   // Device number
-    uint32_t inum;  // Inode number
-    int ref;        // Reference count
-    int32_t flags;  // I_BUSY, I_VALID
+  uint32_t dev;           // Device number
+  uint32_t inum;          // Inode number
+  int ref;                // Reference count
+  int32_t flags;          // I_BUSY, I_VALID
 
-    int16_t type;   // Copy of disk inode
-    int16_t major;
-    int16_t minor;
-    int16_t nlink;
-    uint32_t size;
-    uint32_t addrs[NDIRECT + 1];
+  int16_t type;           // copy of disk inode
+  int16_t major;
+  int16_t minor;
+  int16_t nlink;
+  uint32_t size;
+  uint32_t addrs[NDIRECT+1];
 };
 
-// Table mapping major device number to device functions
+// table mapping major device number to
+// device functions
 struct devsw {
-    int (*read)(struct inode *, char *, int);
-    int (*write)(struct inode *, char *, int);
+  int (*read)(struct inode*, char*, int);
+  int (*write)(struct inode*, char*, int);
 };
 
 extern struct devsw *devsw;
@@ -96,7 +96,7 @@ void inode_init(void);
 
 // Allocate a new inode with the given type on device dev.
 // A free inode has a type of zero.
-struct inode *inode_alloc(uint32_t dev, short type);
+struct inode* inode_alloc(uint32_t dev, short type);
 
 // Copy a modified in-memory inode to disk.
 void inode_update(struct inode *ip);
@@ -104,13 +104,12 @@ void inode_update(struct inode *ip);
 // Find the inode with number inum on device dev
 // and return the in-memory copy. Does not lock
 // the inode and does not read it from disk.
-struct inode *inode_get(uint32_t dev, uint32_t inum);
+struct inode* inode_get(uint32_t dev, uint32_t inum);
 
 // Increment reference count for ip.
 // Returns ip to enable ip = idup(ip1) idiom.
-struct inode *inode_dup(struct inode *ip);
+struct inode* inode_dup(struct inode *ip);
 
-// Lock the given inode.
 // Reads the inode from disk if necessary.
 void inode_lock(struct inode *ip);
 
@@ -145,6 +144,4 @@ int inode_read(struct inode *ip, char *dst, uint32_t off, uint32_t n);
 /** Write data to inode. */
 int inode_write(struct inode *ip, char *src, uint32_t off, uint32_t n);
 
-#endif  /* _KERN_ */
-
-#endif  /* !_KERN_FS_INODE_H_ */
+#endif /* !_KERN_FS_INODE_H_ */

@@ -3,37 +3,37 @@
 
 int MPTOp_test1()
 {
-    unsigned int vaddr = 4096 * 1024 * 300;
-    if (get_ptbl_entry_by_va(10, vaddr) != 0) {
-        dprintf("test 1.1 failed: (%d != 0)\n", get_ptbl_entry_by_va(10, vaddr));
-        return 1;
-    }
-    if (get_pdir_entry_by_va(10, vaddr) != 0) {
-        dprintf("test 1.2 failed: (%d != 0)\n", get_pdir_entry_by_va(10, vaddr));
-        return 1;
-    }
-    set_pdir_entry_by_va(10, vaddr, 100);
-    set_ptbl_entry_by_va(10, vaddr, 100, 259);
-    if (get_ptbl_entry_by_va(10, vaddr) == 0) {
-        dprintf("test 1.3 failed: (%d == 0)\n", get_ptbl_entry_by_va(10, vaddr));
-        return 1;
-    }
-    if (get_pdir_entry_by_va(10, vaddr) == 0) {
-        dprintf("test 1.4 failed: (%d == 0)\n", get_pdir_entry_by_va(10, vaddr));
-        return 1;
-    }
-    rmv_ptbl_entry_by_va(10, vaddr);
-    rmv_pdir_entry_by_va(10, vaddr);
-    if (get_ptbl_entry_by_va(10, vaddr) != 0) {
-        dprintf("test 1.5 failed: (%d != 0)\n", get_ptbl_entry_by_va(10, vaddr));
-        return 1;
-    }
-    if (get_pdir_entry_by_va(10, vaddr) != 0) {
-        dprintf("test 1.6 failed: (%d != 0)\n", get_pdir_entry_by_va(10, vaddr));
-        return 1;
-    }
-    dprintf("test 1 passed.\n");
-    return 0;
+  unsigned int vaddr = 4096*1024*300;
+  if (get_ptbl_entry_by_va(10, vaddr) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (get_pdir_entry_by_va(10, vaddr) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  set_pdir_entry_by_va(10, vaddr, 100);
+  set_ptbl_entry_by_va(10, vaddr, 100, 259);
+  if (get_ptbl_entry_by_va(10, vaddr) == 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (get_pdir_entry_by_va(10, vaddr) == 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  rmv_ptbl_entry_by_va(10, vaddr);
+  rmv_pdir_entry_by_va(10, vaddr);
+  if (get_ptbl_entry_by_va(10, vaddr) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (get_pdir_entry_by_va(10, vaddr) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
 
 /**
@@ -51,12 +51,12 @@ int MPTOp_test1()
  */
 int MPTOp_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_MPTOp()
 {
-    return MPTOp_test1() + MPTOp_test_own();
+  return MPTOp_test1() + MPTOp_test_own();
 }

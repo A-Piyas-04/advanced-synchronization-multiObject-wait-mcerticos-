@@ -1,8 +1,8 @@
 # -*-Makefile-*-
 
-OBJDIRS	+= $(KERN_OBJDIR)/thread/PTCBIntro
+OBJDIRS		+= $(KERN_OBJDIR)/thread/PTCBIntro
 
-KERN_SRCFILES += $(KERN_DIR)/thread/PTCBIntro/PTCBIntro.c
+KERN_SRCFILES	+= $(KERN_DIR)/thread/PTCBIntro/PTCBIntro.c
 
 $(KERN_OBJDIR)/thread/PTCBIntro/%.o: $(KERN_DIR)/thread/PTCBIntro/%.c
 	@echo + $(COMP_NAME)[KERN/thread/PTCBIntro] $<

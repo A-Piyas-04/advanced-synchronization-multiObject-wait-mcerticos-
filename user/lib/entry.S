@@ -1,9 +1,10 @@
 	.text
+
 	.globl _start
 _start:
 	/*
 	 * If there are arguments on the stack, then the current stack will not
-	 * be aligned to a nice big power-of-two boundary.
+	 * be aligned to a nice big power-of-two boundary/
 	 */
 	testl	$0x0fffffff, %esp
 	jnz	args_exist
@@ -20,4 +21,5 @@ args_exist:
 	/* When returning, push the return value on the stack. */
 	pushl	%eax
 spin:
+	//call	yield
 	jmp	spin

@@ -1,9 +1,9 @@
 # -*-Makefile-*-
 
-OBJDIRS	+= $(KERN_OBJDIR)/thread/PKCtxIntro
+OBJDIRS		+= $(KERN_OBJDIR)/thread/PKCtxIntro
 
-KERN_SRCFILES += $(KERN_DIR)/thread/PKCtxIntro/PKCtxIntro.c
-KERN_SRCFILES += $(KERN_DIR)/thread/PKCtxIntro/cswitch.S
+KERN_SRCFILES	+= $(KERN_DIR)/thread/PKCtxIntro/PKCtxIntro.c
+KERN_SRCFILES	+= $(KERN_DIR)/thread/PKCtxIntro/cswitch.S
 
 $(KERN_OBJDIR)/thread/PKCtxIntro/%.o: $(KERN_DIR)/thread/PKCtxIntro/%.c
 	@echo + $(COMP_NAME)[KERN/thread/PKCtxIntro] $<

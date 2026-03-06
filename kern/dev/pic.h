@@ -23,8 +23,8 @@ void pic_enable(int irq);
 void pic_eoi(void);
 void pic_reset(void);
 
-#endif  /* !__ASSEMBLER__ */
+#endif /* !__ASSEMBLER__ */
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_DEV_PIC_H_ */
+#endif /* !_KERN_DEV_PIC_H */

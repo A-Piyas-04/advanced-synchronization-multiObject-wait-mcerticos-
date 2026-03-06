@@ -6,20 +6,15 @@
 
 int PTCBInit_test1()
 {
-    unsigned int i;
-    for (i = 1; i < NUM_IDS; i++) {
-        if (tcb_get_state(i) != TSTATE_DEAD || tcb_get_prev(i) != NUM_IDS
-            || tcb_get_next(i) != NUM_IDS) {
-            dprintf("test 1.1 failed (i = %d): "
-                    "(%d != %d || %d != %d || %d != %d)\n",
-                    i, tcb_get_state(i), TSTATE_DEAD,
-                    tcb_get_prev(i), NUM_IDS,
-                    tcb_get_next(i), NUM_IDS);
-            return 1;
-        }
+  unsigned int i;
+  for (i = 1; i < NUM_IDS; i ++) {
+    if (tcb_get_state(i) != TSTATE_DEAD || tcb_get_prev(i) != NUM_IDS || tcb_get_next(i) != NUM_IDS) {
+      dprintf("test 1 failed.\n");
+      return 1;
     }
-    dprintf("test 1 passed.\n");
-    return 0;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
 
 /**
@@ -37,12 +32,12 @@ int PTCBInit_test1()
  */
 int PTCBInit_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_PTCBInit()
 {
-    return PTCBInit_test1() + PTCBInit_test_own();
+  return PTCBInit_test1() + PTCBInit_test_own();
 }

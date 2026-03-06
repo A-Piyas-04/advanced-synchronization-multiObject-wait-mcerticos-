@@ -3,8 +3,8 @@
 
 #include <types.h>
 
-int strlen(const char *s);
-int strnlen(const char *s, size_t size);
+int  strlen(const char *s);
+int  strnlen(const char *s, size_t size);
 char *strcpy(char *dst, const char *src);
 char *strncpy(char *dst, const char *src, size_t size);
 size_t strlcpy(char *dst, const char *src, size_t size);
@@ -22,4 +22,4 @@ int memcmp(const void *s1, const void *s2, size_t len);
 void *memchr(const void *s, int c, size_t n);
 void *memzero(void *v, size_t n);
 
-#endif  /* !_USER_STRING_H_ */
+#endif /* !_USER_STRING_H_ */

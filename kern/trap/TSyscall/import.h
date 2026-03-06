@@ -20,10 +20,9 @@ void syscall_set_retval5(tf_t *tf, unsigned int retval);
 
 unsigned int container_can_consume(unsigned int curid, unsigned int quota);
 unsigned int container_get_nchildren(unsigned int curid);
-unsigned int proc_create(void *elf_addr, unsigned int quota);
+unsigned int proc_create(void *elf_addr, unsigned int);
 void thread_yield(void);
-void thread_exit(void);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_TRAP_TSYSCALL_H_ */
+#endif /* !_KERN_TRAP_TSYSCALL_H_ */

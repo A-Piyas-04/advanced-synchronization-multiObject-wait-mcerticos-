@@ -11,50 +11,53 @@
 #include <stdio.h>
 #include <syscall.h>
 
-// Collect up to MAX_BUF - 1 characters into a buffer
+// Collect up to MAX_BUF-1 characters into a buffer
 // and perform ONE system call to print all of them,
 // in order to make the lines output to the console atomic
 // and prevent interrupts from causing context switches
 // in the middle of a console output line and such.
 struct printbuf {
-    int idx;            // current buffer index
-    int cnt;            // total bytes printed so far
-    char buf[MAX_BUF];
+	int idx;	// current buffer index
+	int cnt;	// total bytes printed so far
+	char buf[MAX_BUF];
 };
 
-static void putch(int ch, struct printbuf *b)
+static void
+putch(int ch, struct printbuf *b)
 {
-    b->buf[b->idx++] = ch;
-    if (b->idx == MAX_BUF - 1) {
-        b->buf[b->idx] = 0;
-        puts(b->buf, b->idx);
-        b->idx = 0;
-    }
-    b->cnt++;
+	b->buf[b->idx++] = ch;
+	if (b->idx == MAX_BUF-1) {
+		b->buf[b->idx] = 0;
+		puts(b->buf, b->idx);
+		b->idx = 0;
+	}
+	b->cnt++;
 }
 
-int vcprintf(const char *fmt, va_list ap)
+int
+vcprintf(const char *fmt, va_list ap)
 {
-    struct printbuf b;
+	struct printbuf b;
 
-    b.idx = 0;
-    b.cnt = 0;
-    vprintfmt((void *) putch, &b, fmt, ap);
+	b.idx = 0;
+	b.cnt = 0;
+	vprintfmt((void*)putch, &b, fmt, ap);
 
-    b.buf[b.idx] = 0;
-    puts(b.buf, b.idx);
+	b.buf[b.idx] = 0;
+	puts(b.buf, b.idx);
 
-    return b.cnt;
+	return b.cnt;
 }
 
-int printf(const char *fmt, ...)
+int
+printf(const char *fmt, ...)
 {
-    va_list ap;
-    int cnt;
+	va_list ap;
+	int cnt;
 
-    va_start(ap, fmt);
-    cnt = vcprintf(fmt, ap);
-    va_end(ap);
+	va_start(ap, fmt);
+	cnt = vcprintf(fmt, ap);
+	va_end(ap);
 
-    return cnt;
+	return cnt;
 }

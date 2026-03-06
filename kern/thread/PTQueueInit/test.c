@@ -6,70 +6,56 @@
 
 int PTQueueInit_test1()
 {
-    unsigned int i;
-    for (i = 0; i < NUM_IDS; i++) {
-        if (tqueue_get_head(i) != NUM_IDS || tqueue_get_tail(i) != NUM_IDS) {
-            dprintf("test 1.1 failed (i = %d): "
-                    "(%d != %d || %d != %d)\n",
-                    i, tqueue_get_head(i), NUM_IDS,
-                    tqueue_get_tail(i), NUM_IDS);
-            return 1;
-        }
+  unsigned int i;
+  for (i = 0; i < NUM_IDS; i ++) {
+    if (tqueue_get_head(i) != NUM_IDS || tqueue_get_tail(i) != NUM_IDS) {
+      dprintf("test 1 failed.\n");
+      return 1;
     }
-    dprintf("test 1 passed.\n");
-    return 0;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
 
 int PTQueueInit_test2()
 {
-    unsigned int pid;
-    tqueue_enqueue(0, 2);
-    tqueue_enqueue(0, 3);
-    tqueue_enqueue(0, 4);
-    if (tcb_get_prev(2) != NUM_IDS || tcb_get_next(2) != 3) {
-        dprintf("test 2.1 failed: (%d != %d || %d != 3)\n",
-                tcb_get_prev(2), NUM_IDS, tcb_get_next(2));
-        return 1;
-    }
-    if (tcb_get_prev(3) != 2 || tcb_get_next(3) != 4) {
-        dprintf("test 2.2 failed: (%d != 2 || %d != 4)\n",
-                tcb_get_prev(3), tcb_get_next(3));
-        return 1;
-    }
-    if (tcb_get_prev(4) != 3 || tcb_get_next(4) != NUM_IDS) {
-        dprintf("test 2.3 failed: (%d != 3 || %d != %d)\n",
-                tcb_get_prev(4), tcb_get_next(4), NUM_IDS);
-        return 1;
-    }
-    tqueue_remove(0, 3);
-    if (tcb_get_prev(2) != NUM_IDS || tcb_get_next(2) != 4) {
-        dprintf("test 2.4 failed: (%d != %d || %d != 4)\n",
-                tcb_get_prev(2), NUM_IDS, tcb_get_next(2));
-        return 1;
-    }
-    if (tcb_get_prev(3) != NUM_IDS || tcb_get_next(3) != NUM_IDS) {
-        dprintf("test 2.5 failed: (%d != %d || %d != %d)\n",
-                tcb_get_prev(3), NUM_IDS, tcb_get_next(3), NUM_IDS);
-        return 1;
-    }
-    if (tcb_get_prev(4) != 2 || tcb_get_next(4) != NUM_IDS) {
-        dprintf("test 2.6 failed: (%d != 2 || %d != %d)\n",
-                tcb_get_prev(4), tcb_get_next(4), NUM_IDS);
-        return 1;
-    }
-    pid = tqueue_dequeue(0);
-    if (pid != 2 || tcb_get_prev(pid) != NUM_IDS
-        || tcb_get_next(pid) != NUM_IDS || tqueue_get_head(0) != 4
-        || tqueue_get_tail(0) != 4) {
-        dprintf("test 2.7 failed:\n"
-                "(%d != 2 || %d != %d || %d != %d\n"
-                " || %d != 4 || %d != 4)\n",
-                pid, tcb_get_prev(pid), NUM_IDS, tcb_get_next(pid), NUM_IDS,
-                tqueue_get_head(0), tqueue_get_tail(0));
-        return 1;
-    }
-    dprintf("test 2 passed.\n");
-    return 0;
+  unsigned int pid;
+  tqueue_enqueue(0, 2);
+  tqueue_enqueue(0, 3);
+  tqueue_enqueue(0, 4);
+  if (tcb_get_prev(2) != NUM_IDS || tcb_get_next(2) != 3) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  if (tcb_get_prev(3) != 2 || tcb_get_next(3) != 4) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  if (tcb_get_prev(4) != 3 || tcb_get_next(4) != NUM_IDS) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  tqueue_remove(0, 3);
+  if (tcb_get_prev(2) != NUM_IDS || tcb_get_next(2) != 4) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  if (tcb_get_prev(3) != NUM_IDS || tcb_get_next(3) != NUM_IDS) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  if (tcb_get_prev(4) != 2 || tcb_get_next(4) != NUM_IDS) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  pid = tqueue_dequeue(0);
+  if (pid != 2 || tcb_get_prev(pid) != NUM_IDS || tcb_get_next(pid) != NUM_IDS
+   || tqueue_get_head(0) != 4 || tqueue_get_tail(0) != 4) {
+    dprintf("test 2 failed.\n");
+    return 1;
+  }
+  dprintf("test 2 passed.\n");
+  return 0;
 }
 
 /**
@@ -87,12 +73,12 @@ int PTQueueInit_test2()
  */
 int PTQueueInit_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_PTQueueInit()
 {
-    return PTQueueInit_test1() + PTQueueInit_test2() + PTQueueInit_test_own();
+  return PTQueueInit_test1() + PTQueueInit_test2() + PTQueueInit_test_own();
 }

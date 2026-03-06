@@ -5,6 +5,6 @@
 
 unsigned int get_curid(void);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_TRAP_TSYSCALLARG_H_ */
+#endif /* !_KERN_TRAP_TSYSCALLARG_H_ */

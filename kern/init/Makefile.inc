@@ -1,11 +1,11 @@
 # -*-Makefile-*-
 
-OBJDIRS += $(KERN_OBJDIR)/init
+OBJDIRS		+= $(KERN_OBJDIR)/init
 
-KERN_SRCFILES += $(KERN_DIR)/init/init.c
-KERN_SRCFILES += $(KERN_DIR)/init/entry.S
+KERN_SRCFILES	+= $(KERN_DIR)/init/init.c
+KERN_SRCFILES	+= $(KERN_DIR)/init/entry.S
 
-KERN_BINFILES += $(KERN_OBJDIR)/init/boot_ap
+KERN_BINFILES	+= $(KERN_OBJDIR)/init/boot_ap
 
 $(KERN_OBJDIR)/init/%.o: $(KERN_DIR)/init/%.c
 	@echo + $(COMP_NAME)[KERN/init] $<
@@ -17,10 +17,12 @@ $(KERN_OBJDIR)/init/%.o: $(KERN_DIR)/init/%.S
 	@mkdir -p $(@D)
 	$(V)$(CC) $(KERN_CFLAGS) -c -o $@ $<
 
+
 $(KERN_OBJDIR)/init/boot_ap.o: $(KERN_DIR)/init/boot_ap.S
 	@echo + as[KERN/init] $<
 	@mkdir -p $(@D)
 	$(V)$(CC) $(KERN_CFLAGS) -c -o $@ $<
+
 
 $(KERN_OBJDIR)/init/boot_ap: $(KERN_OBJDIR)/init/boot_ap.o
 	@echo + ld[KERN/init] $<

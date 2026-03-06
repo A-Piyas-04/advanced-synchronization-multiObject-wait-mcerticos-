@@ -1,8 +1,8 @@
 # -*-Makefile-*-
 
-OBJDIRS += $(KERN_OBJDIR)/vmm/MPTInit
+OBJDIRS		+= $(KERN_OBJDIR)/vmm/MPTInit
 
-KERN_SRCFILES += $(KERN_DIR)/vmm/MPTInit/MPTInit.c
+KERN_SRCFILES	+= $(KERN_DIR)/vmm/MPTInit/MPTInit.c
 
 $(KERN_OBJDIR)/vmm/MPTInit/%.o: $(KERN_DIR)/vmm/MPTInit/%.c
 	@echo + $(COMP_NAME)[KERN/vmm/MPTInit] $<

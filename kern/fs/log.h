@@ -5,7 +5,7 @@
 // the log (with commit record) to disk, then installs the affected
 // blocks to disk, then erases the log. begin_trans() ensures that
 // only one system call can be in a transaction; others must wait.
-//
+// 
 // Allowing only one transaction at a time means that the file
 // system code doesn't have to worry about the possibility of
 // one transaction reading a block that another one has modified,
@@ -24,13 +24,6 @@
 //   ...
 // Log appends are synchronous.
 
-#ifndef _KERN_FS_LOG_H_
-#define _KERN_FS_LOG_H_
-
-#ifdef _KERN_
-
-#include <lib/buf.h>
-
 void log_init(void);
 
 void begin_trans(void);
@@ -38,7 +31,7 @@ void begin_trans(void);
 void commit_trans(void);
 
 // Caller has modified b->data and is done with the buffer.
-// Append the block to the log and record the block number,
+// Append the block to the log and record the block number, 
 // but don't write the log header (which would commit the write).
 // log_write() replaces bwrite(); a typical use is:
 //   bp = bufcache_read(...)
@@ -46,7 +39,3 @@ void commit_trans(void);
 //   log_write(bp)
 //   bufcache_release(bp)
 void log_write(struct buf *b);
-
-#endif  /* _KERN_ */
-
-#endif  /* !_KERN_FS_LOG_H_ */

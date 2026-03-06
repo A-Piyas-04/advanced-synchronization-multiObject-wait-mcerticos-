@@ -5,48 +5,45 @@
 
 int MPTKern_test1()
 {
-    unsigned int vaddr = 4096 * 1024 * 300;
-    container_split(0, 100);
-    if (get_ptbl_entry_by_va(1, vaddr) != 0) {
-        dprintf("test 1.1 failed: (%d != 0)\n", get_ptbl_entry_by_va(1, vaddr));
-        return 1;
-    }
-    if (get_pdir_entry_by_va(1, vaddr) != 0) {
-        dprintf("test 1.2 failed: (%d != 0)\n", get_pdir_entry_by_va(1, vaddr));
-        return 1;
-    }
-    map_page(1, vaddr, 100, 7);
-    if (get_ptbl_entry_by_va(1, vaddr) == 0) {
-        dprintf("test 1.3 failed: (%d == 0)\n", get_ptbl_entry_by_va(1, vaddr));
-        return 1;
-    }
-    if (get_pdir_entry_by_va(1, vaddr) == 0) {
-        dprintf("test 1.4 failed: (%d == 0)\n", get_pdir_entry_by_va(1, vaddr));
-        return 1;
-    }
-    unmap_page(1, vaddr);
-    if (get_ptbl_entry_by_va(1, vaddr) != 0) {
-        dprintf("test 1.5 failed: (%d != 0)\n", get_ptbl_entry_by_va(1, vaddr));
-        return 1;
-    }
-    dprintf("test 1 passed.\n");
-    return 0;
+  unsigned int vaddr = 4096*1024*300;
+  container_split(0, 100);
+  if (get_ptbl_entry_by_va(1, vaddr) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (get_pdir_entry_by_va(1, vaddr) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  map_page(1, vaddr, 100, 7);
+  if (get_ptbl_entry_by_va(1, vaddr) == 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (get_pdir_entry_by_va(1, vaddr) == 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  unmap_page(1, vaddr);
+  if (get_ptbl_entry_by_va(1, vaddr) != 0) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
 
 int MPTKern_test2()
 {
-    unsigned int i;
-    for (i = 256; i < 960; i++) {
-        if (get_ptbl_entry_by_va(0, i * 4096 * 1024L) !=
-            i * 4096 * 1024L + 3) {
-            dprintf("test 2.1 failed (i = %d): (%d != %d)\n",
-                    get_ptbl_entry_by_va(0, i * 4096 * 1024L),
-                    i * 4096 * 1024L + 3);
-            return 1;
-        }
+  unsigned int i;
+  for (i = 256; i < 960; i ++) {
+    if (get_ptbl_entry_by_va(0, i * 4096 * 1024L) != i * 4096 * 1024L + 3) {
+      dprintf("test 2 failed.\n");
+      return 1;
     }
-    dprintf("test 2 passed.\n");
-    return 0;
+  }
+  dprintf("test 2 passed.\n");
+  return 0;
 }
 
 /**
@@ -64,12 +61,12 @@ int MPTKern_test2()
  */
 int MPTKern_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_MPTKern()
 {
-    return MPTKern_test1() + MPTKern_test2() + MPTKern_test_own();
+  return MPTKern_test1() + MPTKern_test2() + MPTKern_test_own();
 }

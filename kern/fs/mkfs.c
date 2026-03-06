@@ -5,8 +5,6 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#define _KERN_
-
 #define stat certikos_stat  // avoid clash with host struct stat
 typedef signed char		int8_t;
 typedef unsigned char		uint8_t;
@@ -138,7 +136,7 @@ main(int argc, char *argv[])
       perror(argv[i]);
       exit(1);
     }
-
+    
     // Skip leading _ in name when writing to file system.
     // The binaries are named _rm, _cat, etc. to keep the
     // build operating system from trying to execute them

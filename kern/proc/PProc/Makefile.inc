@@ -1,8 +1,8 @@
 # -*-Makefile-*-
 
-OBJDIRS	+= $(KERN_OBJDIR)/proc/PProc
+OBJDIRS		+= $(KERN_OBJDIR)/proc/PProc
 
-KERN_SRCFILES += $(KERN_DIR)/proc/PProc/PProc.c
+KERN_SRCFILES	+= $(KERN_DIR)/proc/PProc/PProc.c
 
 $(KERN_OBJDIR)/proc/PProc/%.o: $(KERN_DIR)/proc/PProc/%.c
 	@echo + $(COMP_NAME)[KERN/proc/PProc] $<

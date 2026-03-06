@@ -5,13 +5,13 @@
 	.globl start_ap, end_ap
 start_ap:
 	.code16
-	cli
+  cli
 	cld
 
 	xorw	%ax, %ax
-	movw	%ax, %ds
-	movw	%ax, %es
-	movw	%ax, %ss
+	movw    %ax, %ds
+	movw    %ax, %es
+	movw    %ax, %ss
 
 	lgdt	gdtdesc
 	movl	%cr0, %eax
@@ -38,21 +38,21 @@ protcseg:
 spin:
 	hlt
 
-	.p2align 2	/* force 4-byte alignment */
+	.p2align	2	/* force 4-byte alignment */
 /* bootstrap GDT */
 gdt:
-	.word 0, 0
-	.byte 0, 0, 0, 0
+	.word	0, 0
+	.byte	0, 0, 0, 0
 
 	/* code segment */
-	.word 0xFFFF, 0
-	.byte 0, 0x9A, 0xCF, 0
+	.word	0xFFFF, 0
+	.byte	0, 0x9A, 0xCF, 0
 
 	/* data segment */
-	.word 0xFFFF, 0
-	.byte 0, 0x92, 0xCF, 0
+	.word	0xFFFF, 0
+	.byte	0, 0x92, 0xCF, 0
 
 /* GDT descriptor */
 gdtdesc:
-	.word 0x17	/* limit */
-	.long gdt	/* addr */
+	.word	0x17			/* limit */
+	.long	gdt			/* addr */

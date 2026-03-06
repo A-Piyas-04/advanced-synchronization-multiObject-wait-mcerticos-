@@ -3,9 +3,9 @@
 
 #ifdef _KERN_
 
-void paging_init(unsigned int mbi_addr);
-void tcb_init_at_id(unsigned int pid);
+void paging_init(unsigned int);
+void tcb_init_at_id(unsigned int);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_THREAD_PTCBINIT_H_ */
+#endif /* !_KERN_THREAD_PTCBINIT_H_ */

@@ -34,3 +34,4 @@ include $(BOOT_DIR)/boot1/Makefile.inc
 # Top-level target to build the bootloader
 boot: $(BOOT_BINFILES)
 	@echo All targets of boot loader are done.
+

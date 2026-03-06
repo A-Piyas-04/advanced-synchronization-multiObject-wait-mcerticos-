@@ -13,19 +13,19 @@ ARCH		:= i386
 COMP_NAME	:= "ccomp"
 
 ENABLE_CCOMP	:= 0
-COMP_NAME	:= "cc"
+COMP_NAME		:= "cc"
 
 # Cross-compiler toolchain
 #
 # This Makefile will automatically use a cross-compiler toolchain installed
-# as 'pios-*' or 'i386-elf-*', if one exists. If the host tools ('gcc',
+# as 'pios-*' or 'i386-elf-*', if one exists.  If the host tools ('gcc',
 # 'objdump', and so forth) compile for a 32-bit x86 ELF target, that will
-# be detected as well. If you have the right compiler toolchain installed
+# be detected as well.  If you have the right compiler toolchain installed
 # using a different name, set GCCPREFIX explicitly in conf/env.mk
 
 # try to infer the correct GCCPREFIX
 ifndef GCCPREFIX
-GCCPREFIX	:= $(shell sh misc/gccprefix.sh)
+GCCPREFIX := $(shell sh misc/gccprefix.sh)
 endif
 
 # Directories
@@ -39,7 +39,7 @@ OBJDIRS		:=
 # Compiler and Linker
 CC		:= $(GCCPREFIX)gcc
 LD		:= $(GCCPREFIX)ld
-CFLAGS		:= -Wall -MD -Wno-strict-aliasing -Wno-unused-function -pipe -fno-builtin -nostdinc -fno-stack-protector
+CFLAGS		:= -MD -Wno-strict-aliasing -Wno-unused-function -pipe -fno-builtin -nostdinc -fno-stack-protector
 LDFLAGS		:= -nostdlib
 
 ifeq (ENABLE_CCOMP, 1)
@@ -68,12 +68,11 @@ OBJCOPY		:= $(GCCPREFIX)objcopy
 DD		:= $(GCCPREFIX)dd
 NM		:= $(GCCPREFIX)nm
 CSCOPE		:= cscope
-GDB		:= $(GCCPREFIX)gdb
 
 # others
-GCC_LIB32	:= $(shell $(CC) $(CFLAGS) -m32 -print-libgcc-file-name)
+GCC_LIB32 := $(shell $(CC) $(CFLAGS) -m32 -print-libgcc-file-name)
 ifeq ($(ARCH), amd64)
-GCC_LIB64	:= $(shell $(CC) $(CFLAGS) -m64 -print-libgcc-file-name)
+GCC_LIB64 := $(shell $(CC) $(CFLAGS) -m64 -print-libgcc-file-name)
 endif
 
 # If this is the first time building CertiKOS64, please follow the instructions
@@ -81,19 +80,23 @@ endif
 # directory $(OBJDIR)/ (default: obj/)
 CERTIKOS_IMG	:= certikos.img
 
-# try to generate a unique GDB port
-GDBPORT		:= $(shell expr `id -u` % 5000 + 25000)
+# bochs
+BOCHS		:= bochs
+BOCHS_OPT	:= -q
 
+# try to generate a unique GDB port
+GDBPORT	:= $(shell expr `id -u` % 5000 + 25000)
+ 
 # qemu
 QEMU		:= qemu-system-x86_64
-QEMUOPTS	:= -smp 4 -drive id=disk0,file=$(CERTIKOS_IMG),format=raw,if=ide -drive id=disk1,file=certikos_disk.img,format=raw,if=ide -serial mon:stdio -gdb tcp::$(GDBPORT) -m 2048 -k en-us -no-reboot
-QEMUOPTS_TCG	:= -icount shift=auto
+QEMUOPTS	:= -smp 4 -hda $(CERTIKOS_IMG) -serial mon:stdio -gdb tcp::$(GDBPORT) -m 2048 -k en-us -hdb certikos_disk.img
 QEMUOPTS_KVM	:= -cpu host -enable-kvm
 QEMUOPTS_BIOS	:= -L $(UTILSDIR)/qemu/
 
 # Targets
 
 .PHONY: all boot kern user deps qemu qemu-nox qemu-gdb mkfs
+
 
 all: boot kern user link
 	@./make_image.py
@@ -105,44 +108,55 @@ ifdef TEST
 endif
 	@echo "All targets are done."
 
+install_img: install_boot install_sys install_user
+	@echo "CertiKOS is installed on the disk image."
+
+bochs: $(CERTIKOS_IMG) .bochsrc
+	@echo + start bochs
+	$(V)$(BOCHS) $(BOCHS_OPT)
+
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 	@./scripts/set_auto_load.sh
 
-# QEMU doesn't truncate the pcap file. Work around this.
+#	QEMU doesn't truncate the pcap file.  Work around this.
 pre-qemu: .gdbinit
 	@rm -f qemu.pcap
 	$(V)cp newfs/certikos_disk_new.img certikos_disk.img
 
 qemu: $(CERTIKOS_IMG) pre-qemu
-	$(V)$(QEMU) $(QEMUOPTS) $(QEMUOPTS_TCG)
+	$(V)$(QEMU) $(QEMUOPTS)
 
 qemu-nox: $(CERTIKOS_IMG) pre-qemu
 	@echo "***"
 	@echo "*** Use Ctrl-a x to exit qemu"
 	@echo "***"
-	$(V)$(QEMU) -nographic $(QEMUOPTS) $(QEMUOPTS_TCG)
+	$(V)$(QEMU) -nographic $(QEMUOPTS)
 
 qemu-gdb: $(CERTIKOS_IMG) pre-qemu
 	@echo "***"
-	@echo "*** Now run 'make gdb' in another terminal." 1>&2
+	@echo "*** Now run 'gdb'." 1>&2
 	@echo "***"
-	$(V)$(QEMU) $(QEMUOPTS) $(QEMUOPTS_TCG) -S
+	$(V)$(QEMU) $(QEMUOPTS) -S
 
 qemu-nox-gdb: $(CERTIKOS_IMG) pre-qemu
 	@echo "***"
-	@echo "*** Now run 'make gdb' in another terminal." 1>&2
+	@echo "*** Now run 'gdb'." 1>&2
 	@echo "***"
-	$(V)$(QEMU) -nographic $(QEMUOPTS) $(QEMUOPTS_TCG) -S
+	$(V)$(QEMU) -nographic $(QEMUOPTS) -S
+
+gdb: pre-qemu
+	@gdb
 
 qemu-kvm: $(CERTIKOS_IMG)
 	$(V)$(QEMU) $(QEMUOPTS) $(QEMUOPTS_KVM)
 
-qemu-kvm-gdb: $(CERTIKOS_IMG)
-	$(V)$(QEMU) $(QEMUOPTS) $(QEMUOPTS_KVM) -S
-
 qemu-bios: $(CERTIKOS_IMG)
-	$(V)$(QEMU) $(QEMUOPTS) $(QEMUOPTS_TCG) $(QEMUOPTS_BIOS)
+	$(V)$(QEMU) $(QEMUOPTS) $(QEMUOPTS_BIOS)
+
+iso: all
+	$(V)cp $(OBJDIR)/kern/kernel $(UTILSDIR)/iso/boot/kernel
+	$(V)grub-mkrescue -o $(CERTIKOS_IMG) $(UTILSDIR)/iso
 
 package:
 	$(V)tar czf ../certikos.tar.gz --exclude=obj --exclude=cscope.* .
@@ -152,13 +166,11 @@ cscope:
 	$(V)find . -name "*.[chsS]" > cscope.files
 	$(V)cscope -bkq -i cscope.files
 
-gdb: pre-qemu
-	$(GDB)
 
 # Sub-makefiles
 include boot/Makefile.inc
-include kern/Makefile.inc
 include user/Makefile.inc
+include kern/Makefile.inc
 
 deps: $(OBJDIR)/.deps
 

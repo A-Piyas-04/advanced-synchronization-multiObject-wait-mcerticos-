@@ -1,8 +1,8 @@
 # -*-Makefile-*-
 
-OBJDIRS += $(KERN_OBJDIR)/trap/TTrapInit
+OBJDIRS		+= $(KERN_OBJDIR)/trap/TTrapInit
 
-KERN_SRCFILES += $(KERN_DIR)/trap/TTrapInit/TTrapInit.c
+KERN_SRCFILES	+= $(KERN_DIR)/trap/TTrapInit/TTrapInit.c
 
 $(KERN_OBJDIR)/trap/TTrapInit/%.o: $(KERN_DIR)/trap/TTrapInit/%.c
 	@echo + $(COMP_NAME)[KERN/trap/TTrapInit] $<

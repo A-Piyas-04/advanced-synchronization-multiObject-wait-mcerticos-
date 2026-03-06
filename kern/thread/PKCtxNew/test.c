@@ -3,30 +3,31 @@
 #include <pmm/MContainer/export.h>
 #include "export.h"
 
-typedef struct kctx {
-    void *esp;
-    unsigned int edi;
-    unsigned int esi;
-    unsigned int ebx;
-    unsigned int ebp;
-    void *eip;
+typedef
+struct kctx {
+	void	*esp;
+	unsigned int edi;
+	unsigned int esi;
+	unsigned int ebx;
+	unsigned int ebp;
+	void	*eip;
 } kctx;
 extern kctx kctx_pool[NUM_IDS];
 
 int PKCtxNew_test1()
 {
-    void *dummy_addr = (void *) 0;
-    unsigned int chid = kctx_new(dummy_addr, 0, 1000);
-    if (container_get_quota(chid) != 1000) {
-        dprintf("test 1.1 failed: (%d != 1000)\n", container_get_quota(chid));
-        return 1;
-    }
-    if (kctx_pool[chid].eip != dummy_addr) {
-        dprintf("test 1.2 failed: (%d != %d)\n", kctx_pool[chid].eip, dummy_addr);
-        return 1;
-    }
-    dprintf("test 1 passed.\n");
-    return 0;
+  void * dummy_addr = (void *) 0;
+  unsigned int chid = kctx_new(dummy_addr, 0, 1000);
+  if (container_get_quota(chid) != 1000) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  if (kctx_pool[chid].eip != dummy_addr) {
+    dprintf("test 1 failed.\n");
+    return 1;
+  }
+  dprintf("test 1 passed.\n");
+  return 0;
 }
 
 /**
@@ -44,12 +45,12 @@ int PKCtxNew_test1()
  */
 int PKCtxNew_test_own()
 {
-    // TODO (optional)
-    // dprintf("own test passed.\n");
-    return 0;
+  // TODO (optional)
+  // dprintf("own test passed.\n");
+  return 0;
 }
 
 int test_PKCtxNew()
 {
-    return PKCtxNew_test1() + PKCtxNew_test_own();
+  return PKCtxNew_test1() + PKCtxNew_test_own();
 }

@@ -1,10 +1,10 @@
 # -*-Makefile-*-
 
-OBJDIRS += $(KERN_OBJDIR)/vmm/MPTIntro
+OBJDIRS		+= $(KERN_OBJDIR)/vmm/MPTIntro
 
-KERN_SRCFILES += $(KERN_DIR)/vmm/MPTIntro/MPTIntro.c
+KERN_SRCFILES	+= $(KERN_DIR)/vmm/MPTIntro/MPTIntro.c
 ifdef TEST
-KERN_SRCFILES += $(KERN_DIR)/vmm/MPTIntro/test.c
+KERN_SRCFILES	+= $(KERN_DIR)/vmm/MPTIntro/test.c
 endif
 
 $(KERN_OBJDIR)/vmm/MPTIntro/%.o: $(KERN_DIR)/vmm/MPTIntro/%.c

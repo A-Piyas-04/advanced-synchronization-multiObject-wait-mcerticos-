@@ -1,5 +1,5 @@
-#ifndef _KERN_THREAD_PTQUEUEINIT_H_
-#define _KERN_THREAD_PTQUEUEINIT_H_
+#ifndef _KERN_THREAD_PTQueueINIT_H_
+#define _KERN_THREAD_PTQueueINIT_H_
 
 #ifdef _KERN_
 
@@ -8,14 +8,12 @@ void tcb_set_prev(unsigned int pid, unsigned int prev_pid);
 unsigned int tcb_get_next(unsigned int pid);
 void tcb_set_next(unsigned int pid, unsigned int next_pid);
 
-void tcb_init(unsigned int mbi_addr);
-
 unsigned int tqueue_get_head(unsigned int chid);
 void tqueue_set_head(unsigned int chid, unsigned int head);
 unsigned int tqueue_get_tail(unsigned int chid);
 void tqueue_set_tail(unsigned int chid, unsigned int tail);
-void tqueue_init_at_id(unsigned int chid);
+void tqueue_init_at_id(unsigned int cpu_idx, unsigned int chid);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_THREAD_PTQUEUEINIT_H_ */
+#endif /* !_KERN_THREAD_PTQueueINIT_H_ */

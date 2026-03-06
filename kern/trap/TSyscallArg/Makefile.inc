@@ -1,8 +1,8 @@
 # -*-Makefile-*-
 
-OBJDIRS += $(KERN_OBJDIR)/trap/TSyscallArg
+OBJDIRS		+= $(KERN_OBJDIR)/trap/TSyscallArg
 
-KERN_SRCFILES += $(KERN_DIR)/trap/TSyscallArg/TSyscallArg.c
+KERN_SRCFILES	+= $(KERN_DIR)/trap/TSyscallArg/TSyscallArg.c
 
 $(KERN_OBJDIR)/trap/TSyscallArg/%.o: $(KERN_DIR)/trap/TSyscallArg/%.c
 	@echo + $(COMP_NAME)[KERN/trap/TSyscallArg] $<

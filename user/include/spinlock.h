@@ -5,9 +5,9 @@
 
 typedef volatile uint32_t spinlock_t;
 
-void spinlock_init(spinlock_t *lk);
-void spinlock_acquire(spinlock_t *lk);
-void spinlock_release(spinlock_t *lk);
-bool spinlock_holding(spinlock_t *lk);
+void spinlock_init(spinlock_t *);
+void spinlock_acquire(spinlock_t *);
+void spinlock_release(spinlock_t *);
+bool spinlock_holding(spinlock_t *);
 
-#endif  /* !_USER_SPINLOCK_H_ */
+#endif /* !_KERN_SPINLOCK_H_ */

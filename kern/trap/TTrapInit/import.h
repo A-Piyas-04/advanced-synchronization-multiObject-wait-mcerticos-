@@ -5,10 +5,10 @@
 
 #include <lib/trap.h>
 
-void syscall_dispatch(tf_t *tf);
-void exception_handler(tf_t *tf);
-void interrupt_handler(tf_t *tf);
+void syscall_dispatch(tf_t *);
+void exception_handler(tf_t *);
+void interrupt_handler(tf_t *);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_TRAP_TTRAPINIT_H_ */
+#endif /* !_KERN_TRAP_TTRAPINIT_H_ */

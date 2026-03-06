@@ -5,8 +5,9 @@
 
 #include <lib/trap.h>
 
-void syscall_dispatch(tf_t *tf);
+void syscall_dispatch(tf_t);
 
-#endif  /* _KERN_ */
+#endif /* _KERN_ */
 
-#endif  /* !_KERN_TRAP_TDISPATCH_H_ */
+#endif /* !_KERN_TRAP_TDISPATCH_H_ */
+

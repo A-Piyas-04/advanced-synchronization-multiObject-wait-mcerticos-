@@ -1,21 +1,21 @@
 # -*-Makefile-*-
 
-OBJDIRS += $(USER_OBJDIR)/pingpong
+OBJDIRS		+= $(USER_OBJDIR)/pingpong
 
-USER_PING_SRC += $(USER_DIR)/pingpong/ping.c
-USER_PING_OBJ := $(patsubst %.c, $(OBJDIR)/%.o, $(USER_PING_SRC))
-USER_PING_OBJ := $(patsubst %.S, $(OBJDIR)/%.o, $(USER_PING_OBJ))
-KERN_BINFILES += $(USER_OBJDIR)/pingpong/ping
+USER_PING_SRC	+= $(USER_DIR)/pingpong/ping.c
+USER_PING_OBJ	:= $(patsubst %.c, $(OBJDIR)/%.o, $(USER_PING_SRC))
+USER_PING_OBJ	:= $(patsubst %.S, $(OBJDIR)/%.o, $(USER_PING_OBJ))
+KERN_BINFILES	+= $(USER_OBJDIR)/pingpong/ping
 
-USER_PONG_SRC += $(USER_DIR)/pingpong/pong.c
-USER_PONG_OBJ := $(patsubst %.c, $(OBJDIR)/%.o, $(USER_PONG_SRC))
-USER_PONG_OBJ := $(patsubst %.S, $(OBJDIR)/%.o, $(USER_PONG_OBJ))
-KERN_BINFILES += $(USER_OBJDIR)/pingpong/pong
+USER_PONG_SRC	+= $(USER_DIR)/pingpong/pong.c
+USER_PONG_OBJ	:= $(patsubst %.c, $(OBJDIR)/%.o, $(USER_PONG_SRC))
+USER_PONG_OBJ	:= $(patsubst %.S, $(OBJDIR)/%.o, $(USER_PONG_OBJ))
+KERN_BINFILES	+= $(USER_OBJDIR)/pingpong/pong
 
-USER_DING_SRC += $(USER_DIR)/pingpong/ding.c
-USER_DING_OBJ := $(patsubst %.c, $(OBJDIR)/%.o, $(USER_DING_SRC))
-USER_DING_OBJ := $(patsubst %.S, $(OBJDIR)/%.o, $(USER_DING_OBJ))
-KERN_BINFILES += $(USER_OBJDIR)/pingpong/ding
+USER_DING_SRC	+= $(USER_DIR)/pingpong/ding.c
+USER_DING_OBJ	:= $(patsubst %.c, $(OBJDIR)/%.o, $(USER_DING_SRC))
+USER_DING_OBJ	:= $(patsubst %.S, $(OBJDIR)/%.o, $(USER_DING_OBJ))
+KERN_BINFILES	+= $(USER_OBJDIR)/pingpong/ding
 
 pingpong: $(USER_OBJDIR)/pingpong/ping \
           $(USER_OBJDIR)/pingpong/pong \

@@ -4,6 +4,7 @@
 
 #include "import.h"
 
+
 /**
  * Allocates memory for the new child thread, then sets the eip, and esp
  * of the thread states. The eip should be set to [entry], and the
@@ -14,15 +15,10 @@
  */
 unsigned int kctx_new(void *entry, unsigned int id, unsigned int quota)
 {
-    unsigned int pid = NUM_IDS;
+  unsigned int pid;
+  pid = alloc_mem_quota(id, quota);
+  kctx_set_esp(pid, proc_kstack[pid].kstack_hi);
+  kctx_set_eip(pid, entry);
 
-    if (container_can_consume(id, quota)) {
-        pid = alloc_mem_quota(id, quota);
-        if (pid != NUM_IDS) {
-            kctx_set_esp(pid, proc_kstack[pid].kstack_hi);
-            kctx_set_eip(pid, entry);
-        }
-    }
-
-    return pid;
+  return pid;
 }
