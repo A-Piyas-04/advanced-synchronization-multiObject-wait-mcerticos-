@@ -7,6 +7,7 @@
 #include <lib/spinlock.h>
 #include <lib/types.h>
 
+
 #define MAX_WAITSETS 64
 #define MAX_SOURCES_PER_WAITSET 32
 
@@ -35,8 +36,8 @@ struct wait_event {
 };
 
 struct notif_source {
-    TAILQ_ENTRY(notif_source) entry;
-    TAILQ_ENTRY(notif_source) triggered_entry;
+    SLIST_ENTRY(notif_source) entry;
+    SLIST_ENTRY(notif_source) triggered_entry;
     int type;
     int id;
     int events;
@@ -47,8 +48,8 @@ struct notif_source {
 
 struct waitset {
     spinlock_t lock;
-    TAILQ_HEAD(source_list, notif_source) sources;
-    TAILQ_HEAD(triggered_list, notif_source) triggered;
+    SLIST_HEAD(source_list, notif_source) sources;
+    SLIST_HEAD(triggered_list, notif_source) triggered;
     unsigned int waiting_thread; // PID of waiting thread, or NUM_IDS if none
     unsigned int owner_pid; // PID of the process that owns this waitset
     int active; // Is this waitset allocated?

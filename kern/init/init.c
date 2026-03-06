@@ -2,8 +2,14 @@
 #include <lib/types.h>
 #include <lib/monitor.h>
 #include <thread/PThread/export.h>
+#include <thread/PTQueueInit/export.h>
+#include <thread/PTCBIntro/export.h>
+#include <thread/PCurID/export.h>
+#include <thread/PKCtxIntro/export.h>
+#include <proc/PProc/export.h>
 #include <dev/devinit.h>
 #include <pcpu/PCPUIntro/export.h>
+#include <pcpu/PCPUIntro/import.h>
 #include <lib/kstack.h>
 #include <lib/thread.h>
 #include <lib/x86.h>

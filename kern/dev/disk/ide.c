@@ -13,7 +13,7 @@
 #include "ide.h"
 
 // Forward declaration for PCPU function
-int pcpu_ncpu(void);
+uint32_t pcpu_ncpu(void);
 
 // idequeue points to the buf now being read/written to the disk.
 // idequeue->qnext points to the next buf to be processed.

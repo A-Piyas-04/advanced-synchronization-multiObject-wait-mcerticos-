@@ -310,6 +310,32 @@ void sys_ls(tf_t *tf)
 
 void sys_cp(tf_t *tf)
 {
+  syscall_set_errno(tf, E_INVAL_CALLNR);
+  syscall_set_retval1(tf, -1);
+}
+
+void sys_pwd(tf_t *tf)
+{
+  syscall_set_errno(tf, E_INVAL_CALLNR);
+  syscall_set_retval1(tf, -1);
+}
+
+void sys_mv(tf_t *tf)
+{
+  syscall_set_errno(tf, E_INVAL_CALLNR);
+  syscall_set_retval1(tf, -1);
+}
+
+void sys_rm(tf_t *tf)
+{
+  syscall_set_errno(tf, E_INVAL_CALLNR);
+  syscall_set_retval1(tf, -1);
+}
+
+void sys_cat(tf_t *tf)
+{
+  syscall_set_errno(tf, E_INVAL_CALLNR);
+  syscall_set_retval1(tf, -1);
 }
 
 void sys_readline(tf_t *tf)

@@ -13,8 +13,8 @@
 
 // Forward declarations for PCPU functions
 bool pcpu_onboot(void);
-int pcpu_ncpu(void);
-int pcpu_cpu_lapicid(int cpunum);
+uint32_t pcpu_ncpu(void);
+lapicid_t pcpu_cpu_lapicid(int cpunum);
 
 volatile static bool using_apic = FALSE;
 volatile static bool intr_inited = FALSE;

@@ -15,6 +15,40 @@ struct notif_source source_pool[MAX_SOURCES];
 struct notif_source *free_sources;
 spinlock_t source_pool_lock;
 
+static void remove_source_from_sources(struct waitset *ws, struct notif_source *target)
+{
+    struct notif_source *s;
+
+    if (SLIST_FIRST(&ws->sources) == target) {
+        SLIST_REMOVE_HEAD(&ws->sources, entry);
+        return;
+    }
+
+    SLIST_FOREACH(s, &ws->sources, entry) {
+        if (SLIST_NEXT(s, entry) == target) {
+            SLIST_NEXT(s, entry) = SLIST_NEXT(target, entry);
+            return;
+        }
+    }
+}
+
+static void remove_source_from_triggered(struct waitset *ws, struct notif_source *target)
+{
+    struct notif_source *s;
+
+    if (SLIST_FIRST(&ws->triggered) == target) {
+        SLIST_REMOVE_HEAD(&ws->triggered, triggered_entry);
+        return;
+    }
+
+    SLIST_FOREACH(s, &ws->triggered, triggered_entry) {
+        if (SLIST_NEXT(s, triggered_entry) == target) {
+            SLIST_NEXT(s, triggered_entry) = SLIST_NEXT(target, triggered_entry);
+            return;
+        }
+    }
+}
+
 void waitset_init(void)
 {
     int i;
@@ -23,8 +57,8 @@ void waitset_init(void)
     /* Initialize waitsets */
     for (i = 0; i < MAX_WAITSETS; i++) {
         spinlock_init(&waitset_pool[i].lock);
-        TAILQ_INIT(&waitset_pool[i].sources);
-        TAILQ_INIT(&waitset_pool[i].triggered);
+        SLIST_INIT(&waitset_pool[i].sources);
+        SLIST_INIT(&waitset_pool[i].triggered);
         waitset_pool[i].active = 0;
         waitset_pool[i].waiting_thread = NUM_IDS;
     }
@@ -68,8 +102,8 @@ int waitset_create(void)
         if (!waitset_pool[i].active) {
             waitset_pool[i].active = 1;
             waitset_pool[i].owner_pid = get_curid();
-            TAILQ_INIT(&waitset_pool[i].sources);
-            TAILQ_INIT(&waitset_pool[i].triggered);
+            SLIST_INIT(&waitset_pool[i].sources);
+            SLIST_INIT(&waitset_pool[i].triggered);
             waitset_pool[i].waiting_thread = NUM_IDS;
             spinlock_release(&waitset_pool[i].lock);
             return i;
@@ -95,7 +129,7 @@ int waitset_ctl(int wsid, int op, int type, int id, int events, void *data)
     }
 
     /* Find existing source if any */
-    TAILQ_FOREACH(s, &ws->sources, entry) {
+    SLIST_FOREACH(s, &ws->sources, entry) {
         if (s->type == type && s->id == id) {
             target = s;
             break;
@@ -118,15 +152,15 @@ int waitset_ctl(int wsid, int op, int type, int id, int events, void *data)
         s->triggered = 0;
         s->data = data;
         s->ws = ws;
-        TAILQ_INSERT_TAIL(&ws->sources, s, entry);
+        SLIST_INSERT_HEAD(&ws->sources, s, entry);
     } else if (op == WS_CTL_DEL) {
         if (!target) {
             spinlock_release(&ws->lock);
             return -1;
         }
-        TAILQ_REMOVE(&ws->sources, target, entry);
+        remove_source_from_sources(ws, target);
         if (target->triggered) {
-            TAILQ_REMOVE(&ws->triggered, target, triggered_entry);
+            remove_source_from_triggered(ws, target);
         }
         source_free(target);
     } else if (op == WS_CTL_MOD) {
@@ -159,7 +193,7 @@ int waitset_wait(int wsid, struct wait_event *events, int maxevents, int timeout
     }
 
     /* Check triggered events */
-    while (TAILQ_EMPTY(&ws->triggered)) {
+    while (SLIST_EMPTY(&ws->triggered)) {
         /* No events. Should we wait? */
         /* If timeout == 0, return immediately (polling) */
         
@@ -185,20 +219,18 @@ int waitset_wait(int wsid, struct wait_event *events, int maxevents, int timeout
     }
 
     /* We have triggered events */
-    s = TAILQ_FIRST(&ws->triggered);
-    while (s && count < maxevents) {
-        struct notif_source *next = TAILQ_NEXT(s, triggered_entry);
-        
+    while (!SLIST_EMPTY(&ws->triggered) && count < maxevents) {
+        s = SLIST_FIRST(&ws->triggered);
+
         events[count].source_type = s->type;
         events[count].source_id = s->id;
         events[count].events = s->events; 
         events[count].data = s->data;
-        
-        TAILQ_REMOVE(&ws->triggered, s, triggered_entry);
+
+        SLIST_REMOVE_HEAD(&ws->triggered, triggered_entry);
         s->triggered = 0;
-        
+
         count++;
-        s = next;
     }
     
     ws->waiting_thread = NUM_IDS;
@@ -230,12 +262,12 @@ void waitset_notify(int target_pid, int type, int id, int event)
         }
         
         /* Check sources */
-        TAILQ_FOREACH(s, &ws->sources, entry) {
+        SLIST_FOREACH(s, &ws->sources, entry) {
             if (s->type == type && (s->id == id || s->id == -1)) { /* Support wildcard id -1? */
                 /* Found a match */
                 if (!s->triggered) {
                     s->triggered = 1;
-                    TAILQ_INSERT_TAIL(&ws->triggered, s, triggered_entry);
+                    SLIST_INSERT_HEAD(&ws->triggered, s, triggered_entry);
                     
                     if (ws->waiting_thread != NUM_IDS) {
                         thread_wakeup(ws);
