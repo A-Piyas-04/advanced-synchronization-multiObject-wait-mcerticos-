@@ -11,6 +11,30 @@
 #include <file.h>
 #include <signal.h>
 
+/* Waitset Event Types */
+#define WS_EVENT_NONE 0
+#define WS_EVENT_READ 1
+#define WS_EVENT_WRITE 2
+#define WS_EVENT_ERROR 4
+#define WS_EVENT_SIGNAL 8
+#define WS_EVENT_IPC 16
+
+/* Waitset Source Types */
+#define WS_SOURCE_IPC 1
+#define WS_SOURCE_SIGNAL 2
+
+/* Waitset Control Operations */
+#define WS_CTL_ADD 1
+#define WS_CTL_DEL 2
+#define WS_CTL_MOD 3
+
+struct wait_event {
+    int source_type;
+    int source_id;
+    int events;
+    void *data;
+};
+
 static gcc_inline void
 sys_puts(const char *s, size_t len)
 {
@@ -99,7 +123,7 @@ static gcc_inline int
 sys_read(int fd, char *buf, size_t n)
 {
 	int errno;
-	size_t ret;
+	int ret;
 
 	asm volatile("int %2"
 		     : "=a" (errno),
@@ -115,10 +139,10 @@ sys_read(int fd, char *buf, size_t n)
 }
 
 static gcc_inline int
-sys_write(int fd, char *p, int n)
+sys_write(int fd, const char *buf, size_t n)
 {
 	int errno;
-	size_t ret;
+	int ret;
 
 	asm volatile("int %2"
 		     : "=a" (errno),
@@ -126,7 +150,7 @@ sys_write(int fd, char *p, int n)
 		     : "i" (T_SYSCALL),
 		       "a" (SYS_write),
 		       "b" (fd),
-		       "c" (p),
+		       "c" (buf),
 		       "d" (n)
 		     : "cc", "memory");
 
@@ -134,294 +158,17 @@ sys_write(int fd, char *p, int n)
 }
 
 static gcc_inline int
-sys_close(int fd)
-{
-	int errno;
-	int ret;
-
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_close),
-		       "b" (fd)
-		     : "cc", "memory");
-
-	return errno ? -1 : 0;
-}
-
-/**
- * Return Value: Upon successful completion, 0 shall be returned. Otherwise, -1
- * shall be returned and errno set to indicate the error.
- */
-static gcc_inline int
-sys_fstat(int fd, struct file_stat *st)
-{
-	int errno;
-	int ret;
-
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_stat),
-		       "b" (fd),
-		       "c" (st)
-		     : "cc", "memory");
-
-	return errno ? -1 : 0;
-}
-
-static gcc_inline int
-sys_link(char *old, char* new)
-{
-  int errno, ret;
-  unsigned int old_len, new_len;
-  old_len = strlen(old);
-  new_len = strlen(new);
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_link),
-		       "b" (old),
-		       "c" (new),
-                       "d" (old_len),
-                       "S" (new_len)
-		     : "cc", "memory");
-
-	return errno ? -1 : 0;
-}
-
-static gcc_inline int
-sys_unlink(char *path)
-{
-  int errno, ret;
-  unsigned int len = strlen(path);
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_unlink),
-		       "b" (path),
-                       "c" (len)
-		     : "cc", "memory");
-
-	return errno ? -1 : 0;
-}
-
-static gcc_inline int
-sys_open(char *path, int omode)
-{
-	int errno;
-	int fd;
-        unsigned int len = strlen(path);
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (fd)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_open),
-		       "b" (path),
-		       "c" (omode),
-                       "d" (len)
-		     : "cc", "memory");
-
-	return errno ? -1 : fd;
-}
-
-static gcc_inline int
-sys_mkdir(char *path)
-{
-  int errno, ret;
-  unsigned int len = strlen(path);
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_mkdir),
-		       "b" (path),
-                       "c" (len)
-		     : "cc", "memory");
-
-	return errno ? -1 : 0;
-}
-
-static gcc_inline int
-sys_is_dir(int fd)
-{
-  int errno, isDir;
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (isDir)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_is_dir),
-		       "b" (fd)
-		     : "cc", "memory");
-
-	return errno ? -1 : isDir;
-}
-
-static gcc_inline int
-sys_chdir(char *path)
-{
-  int errno, ret;
-  unsigned int len = strlen(path);
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_chdir),
-		       "b" (path),
-                       "c" (len)
-		     : "cc", "memory");
-
-	return errno ? -1 : 0;
-}
- static gcc_inline int
-sys_readline(char* start)
-{
-	int errno, ret;
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (ret)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_readline),
-		       "b" (start)
-		     : "cc", "memory");
-	return errno ? -1: 0;
-}
-
-static gcc_inline int
-sys_ls(char * buf, int buf_len)
-{
-	int errno, len;
-	asm volatile("int %2"
-		     : "=a" (errno),
-		       "=b" (len)
-		     : "i" (T_SYSCALL),
-		       "a" (SYS_ls),
-                       "b" (buf),
-                       "c" (buf_len)
-		     : "cc", "memory");
-	return errno ? -1: len;
-}
-
-static gcc_inline int
-sys_pwd(char * buf)
-{
-	int errno,ret;
-	asm volatile ("int %2"
-		      : "=a" (errno),
-			"=b" (ret)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_pwd),
-                        "b" (buf)
-		      : "cc", "memory");
-	return errno ? -1: 0;
-}
-
-/*
-static gcc_inline int
-sys_cd(char* path)
-{
-	int errno,ret;
-	asm volatile ("int %2"
-		      : "=a" (errno),
-			"=b" (ret)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_cd),
-		 	"b" (path)
-		      : "cc", "memory");
-	return errno ? -1: 0;
-}*/
-
-static gcc_inline int
-sys_cp(char* path1, char* path2, char* path3)
-{
-	int errno,ret;
-	asm volatile ("int %2"
-		      : "=a" (errno),
-			"=b" (ret)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_cp),
-			"b" (path1),
-			"c" (path2),
-			"d" (path3)
-		      : "cc", "memory");
-	return errno ? -1: 0;
-}
-
-static gcc_inline int
-sys_mv(void)
-{
-	int errno,ret;
-	asm volatile ("int %2"
-		      : "=a" (errno),
-			"=b" (ret)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_mv)
-		      : "cc", "memory");
-	return errno ? -1: 0;
-}
-
-static gcc_inline int
-sys_rm(int isRecursive, char* path)
-{
-	int errno,ret;
-        int len = strlen(path);
-	asm volatile ("int %2"
-		      : "=a" (errno),
-			"=b" (ret)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_rm),
-			"b" (path),
-			"c" (len),
-                        "d" (isRecursive)
-		      : "cc", "memory");
-	return errno ? -1: 0;
-}
-
-
-static gcc_inline int
-sys_cat(void)
-{
-	int errno,ret;
-	asm volatile ("int %2"
-		      : "=a" (errno),
-			"=b" (ret)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_cat)
-		      : "cc", "memory");
-	return errno ? -1: 0;
-}
-
-static gcc_inline int
-sys_touch(void)
-{
-	int errno,ret;
-	asm volatile ("int %2"
-		      : "=a" (errno),
-			"=b" (ret)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_touch)
-		      : "cc", "memory");
-	return errno ? -1: 0;
-}
-
-/* Signal system calls */
-
-static gcc_inline int
 sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 {
 	int errno;
-	asm volatile ("int %1"
-		      : "=a" (errno)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_sigaction),
-		        "b" (signum),
-		        "c" (act),
-		        "d" (oldact)
-		      : "cc", "memory");
+	asm volatile("int %1"
+		     : "=a" (errno)
+		     : "i" (T_SYSCALL),
+		       "a" (SYS_sigaction),
+		       "b" (signum),
+		       "c" (act),
+		       "d" (oldact)
+		     : "cc", "memory");
 	return errno ? -1 : 0;
 }
 
@@ -429,13 +176,13 @@ static gcc_inline int
 sys_kill(int pid, int signum)
 {
 	int errno;
-	asm volatile ("int %1"
-		      : "=a" (errno)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_kill),
-		        "b" (pid),
-		        "c" (signum)
-		      : "cc", "memory");
+	asm volatile("int %1"
+		     : "=a" (errno)
+		     : "i" (T_SYSCALL),
+		       "a" (SYS_kill),
+		       "b" (pid),
+		       "c" (signum)
+		     : "cc", "memory");
 	return errno ? -1 : 0;
 }
 
@@ -443,13 +190,60 @@ static gcc_inline int
 sys_pause(void)
 {
 	int errno;
-	asm volatile ("int %1"
-		      : "=a" (errno)
-		      : "i" (T_SYSCALL),
-		        "a" (SYS_pause)
-		      : "cc", "memory");
+	asm volatile("int %1"
+		     : "=a" (errno)
+		     : "i" (T_SYSCALL),
+		       "a" (SYS_pause)
+		     : "cc", "memory");
 	return errno ? -1 : 0;
 }
 
+static gcc_inline int
+sys_waitset_create(void)
+{
+	int errno, wsid;
+	asm volatile("int %2"
+		     : "=a" (errno),
+		       "=b" (wsid)
+		     : "i" (T_SYSCALL),
+		       "a" (SYS_waitset_create)
+		     : "cc", "memory");
+	return errno ? -1 : wsid;
+}
+
+static gcc_inline int
+sys_waitset_ctl(int wsid, int op, int type, int id, int events)
+{
+	int errno, ret;
+	asm volatile("int %2"
+		     : "=a" (errno),
+		       "=b" (ret)
+		     : "i" (T_SYSCALL),
+		       "a" (SYS_waitset_ctl),
+		       "b" (wsid),
+		       "c" (op),
+		       "d" (type),
+		       "S" (id),
+		       "D" (events)
+		     : "cc", "memory");
+	return errno ? -1 : ret;
+}
+
+static gcc_inline int
+sys_waitset_wait(int wsid, struct wait_event *events, int maxevents, int timeout)
+{
+	int errno, count;
+	asm volatile("int %2"
+		     : "=a" (errno),
+		       "=b" (count)
+		     : "i" (T_SYSCALL),
+		       "a" (SYS_waitset_wait),
+		       "b" (wsid),
+		       "c" (events),
+		       "d" (maxevents),
+		       "S" (timeout)
+		     : "cc", "memory");
+	return errno ? -1 : count;
+}
 
 #endif

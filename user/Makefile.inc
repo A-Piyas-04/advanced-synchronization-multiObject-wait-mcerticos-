@@ -29,8 +29,24 @@ $(SIGNAL_TEST_BIN): $(USER_LIB_OBJ) $(SIGNAL_TEST_OBJ)
 	@echo + ld $@
 	$(V)$(LD) $(USER_LDFLAGS) -o $@ $^ $(GCC_LIBS)
 
-user: lib idle pingpong fstest shell $(SIGNAL_TEST_BIN)
+# Waitset demo program
+WAITSET_DEMO_SRC := $(USER_DIR)/waitset_demo.c
+WAITSET_DEMO_OBJ := $(USER_OBJDIR)/waitset_demo.o
+WAITSET_DEMO_BIN := $(USER_OBJDIR)/waitset_demo
+
+KERN_BINFILES += $(WAITSET_DEMO_BIN)
+
+$(WAITSET_DEMO_OBJ): $(WAITSET_DEMO_SRC)
+	@echo + cc $<
+	$(V)$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<
+
+$(WAITSET_DEMO_BIN): $(USER_LIB_OBJ) $(WAITSET_DEMO_OBJ)
+	@echo + ld $@
+	$(V)$(LD) $(USER_LDFLAGS) -o $@ $^ $(GCC_LIBS)
+
+user: lib idle pingpong fstest shell $(SIGNAL_TEST_BIN) $(WAITSET_DEMO_BIN)
 	@echo All targets of user are done.
 
 install_user:
 	$(V)cp $(SIGNAL_TEST_BIN) $(OBJDIR)/user/
+	$(V)cp $(WAITSET_DEMO_BIN) $(OBJDIR)/user/

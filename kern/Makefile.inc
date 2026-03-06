@@ -34,6 +34,7 @@ include		$(KERN_DIR)/vmm/Makefile.inc
 include		$(KERN_DIR)/thread/Makefile.inc
 include		$(KERN_DIR)/proc/Makefile.inc
 include		$(KERN_DIR)/trap/Makefile.inc
+include		$(KERN_DIR)/sync/Makefile.inc
 include		$(KERN_DIR)/fs/Makefile.inc
 
 KERN_CFLAGS	+= $(KERN_DEBUG_FLAGS)

@@ -147,6 +147,17 @@ void syscall_dispatch(tf_t *tf)
     sys_sigreturn(tf);
     break;
 
+  /** Waitset syscalls **/
+  case SYS_waitset_create:
+    sys_waitset_create(tf);
+    break;
+  case SYS_waitset_ctl:
+    sys_waitset_ctl(tf);
+    break;
+  case SYS_waitset_wait:
+    sys_waitset_wait(tf);
+    break;
+
   default:
     syscall_set_errno(E_INVAL_CALLNR);
   }

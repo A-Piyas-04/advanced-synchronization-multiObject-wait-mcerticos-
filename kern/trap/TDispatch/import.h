@@ -16,6 +16,11 @@ void sys_kill(tf_t *tf);
 void sys_pause(tf_t *tf);
 void sys_sigreturn(tf_t *tf);
 
+/* Waitset syscalls */
+void sys_waitset_create(tf_t *tf);
+void sys_waitset_ctl(tf_t *tf);
+void sys_waitset_wait(tf_t *tf);
+
 /* Shell syscalls */
 void sys_sync_send(tf_t *tf);
 void sys_sync_recv(tf_t *tf);

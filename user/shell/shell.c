@@ -819,20 +819,20 @@ int shell_spawn(int argc, char **argv)
 {
     if (argc < 2) {
         printf("Usage: spawn <elf_id>\n");
-        printf("  elf_id: 1=ping, 2=pong, 3=ding\n");
+        printf("  elf_id: 1=ping, 2=pong, 3=ding, 6=waitset_demo\n");
         return -1;
     }
 
     int elf_id = str_to_int(argv[1]);
 
-    if (elf_id < 1 || elf_id > 5) {
-        printf("Invalid elf_id: %d (must be 1-5)\n", elf_id);
+    if (elf_id < 1 || elf_id > 6) {
+        printf("Invalid elf_id: %d (must be 1-6)\n", elf_id);
         return -1;
     }
 
     printf("Spawning process with elf_id %d...\n", elf_id);
 
-    pid_t new_pid = spawn(elf_id, 1000);
+    pid_t new_pid = sys_spawn(elf_id, 1000);
     if (new_pid != -1) {
         printf("Process spawned with PID %d\n", new_pid);
     } else {

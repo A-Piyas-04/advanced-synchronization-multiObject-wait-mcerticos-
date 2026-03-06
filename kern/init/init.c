@@ -7,6 +7,7 @@
 #include <lib/kstack.h>
 #include <lib/thread.h>
 #include <lib/x86.h>
+#include <kern/sync/waitset.h>
 
 /* Global definitions for kernel stacks (declared extern in kstack.h) */
 struct kstack bsp_kstack[NUM_CPUS];
@@ -85,6 +86,7 @@ void
 kern_init (uintptr_t mbi_addr)
 {
     thread_init(mbi_addr);
+    waitset_init();
 
     KERN_INFO("[BSP KERN] Kernel initialized.\n");
 
