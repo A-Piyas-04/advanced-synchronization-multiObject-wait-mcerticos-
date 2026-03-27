@@ -59,6 +59,7 @@ int shell_append(int argc, char **argv);
 int shell_kill(int argc, char **argv);
 int shell_trap(int argc, char **argv);
 int shell_spawn(int argc, char **argv);
+int shell_ipcsend(int argc, char **argv);
 
 int _shell_rm(char * path, int isRecursive);
 int rm_file(char * filename);
@@ -97,7 +98,8 @@ static struct Command commands[] =
         {"help", "help \n\t print this help message", shell_help},
         {"kill", "kill <signal> <pid> \n\t send signal to process", shell_kill},
         {"trap", "trap <signum> <handler> \n\t register signal handler", shell_trap},
-        {"spawn", "spawn <elf_id> \n\t spawn a new process (1=ping, 2=pong, 3=ding)", shell_spawn}
+        {"spawn", "spawn <elf_id> \n\t spawn a new process (1=ping, 2=pong, 3=ding, 6=waitset_demo)", shell_spawn},
+        {"ipcsend", "ipcsend <pid> <message> \n\t send synchronous IPC message to pid (blocks until receiver receives)", shell_ipcsend}
 };
 
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
@@ -108,6 +110,52 @@ int shell_help(int argc, char** argv){
     for(i = 0; i < NCOMMANDS; i++){
         printf("%s\n", commands[i].desc);
     }
+    return 0;
+}
+
+int shell_ipcsend(int argc, char **argv)
+{
+    if (argc < 3) {
+        printf("Usage: ipcsend <pid> <message>\n");
+        return -1;
+    }
+
+    int pid = str_to_int(argv[1]);
+    if (pid < 1 || pid > 63) {
+        printf("Invalid PID: %d (must be 1-63)\n", pid);
+        return -1;
+    }
+
+    char msg[256];
+    int pos = 0;
+    int i;
+    for (i = 2; i < argc; i++) {
+        const char *part = argv[i];
+        int j = 0;
+        while (part[j] != '\0') {
+            if (pos >= (int)sizeof(msg) - 1) {
+                msg[pos] = '\0';
+                break;
+            }
+            msg[pos++] = part[j++];
+        }
+        if (pos >= (int)sizeof(msg) - 1) {
+            msg[pos] = '\0';
+            break;
+        }
+        if (i != argc - 1) {
+            msg[pos++] = ' ';
+            if (pos >= (int)sizeof(msg) - 1) {
+                msg[pos] = '\0';
+                break;
+            }
+        }
+    }
+    msg[pos] = '\0';
+
+    printf("Sending IPC to process %d: %s\n", pid, msg);
+    sys_sync_send(pid, msg, (size_t)strlen(msg) + 1);
+    printf("IPC send completed (receiver consumed message).\n");
     return 0;
 }
 
@@ -738,7 +786,7 @@ int shell_kill(int argc, char **argv)
     if (argc < 3) {
         printf("Usage: kill -<signal> <pid>\n");
         printf("Example: kill -9 2\n");
-        return;
+        return -1;
     }
 
     int sig = 0;
@@ -759,13 +807,13 @@ int shell_kill(int argc, char **argv)
     // Validate signal number (1-31)
     if (sig < 1 || sig > 31) {
         printf("Invalid signal number: %d (must be 1-31)\n", sig);
-        return;
+        return -1;
     }
 
     // Validate PID
     if (pid < 1 || pid > 63) {
         printf("Invalid PID: %d (must be 1-63)\n", pid);
-        return;
+        return -1;
     }
 
     printf("Sending signal %d to process %d...\n", sig, pid);
@@ -776,6 +824,7 @@ int shell_kill(int argc, char **argv)
     } else {
         printf("Failed to send signal (error: %d)\n", result);
     }
+    return result == 0 ? 0 : -1;
 }
 
 void signal_handler(int signum)

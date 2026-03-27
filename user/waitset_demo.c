@@ -22,6 +22,7 @@ int main(int argc, char **argv)
     struct wait_event events[4];
     int n, i;
     int target_pid = 0;
+    char ipc_buf[128];
 
     printf("[demo] Starting waitset demo\n");
 
@@ -49,12 +50,12 @@ int main(int argc, char **argv)
     }
     printf("[demo] Registered SIGUSR2\n");
 
-    ret = sys_waitset_ctl(wsid, WS_CTL_ADD, WS_SOURCE_IPC, 2, WS_EVENT_IPC);
+    ret = sys_waitset_ctl(wsid, WS_CTL_ADD, WS_SOURCE_IPC, -1, WS_EVENT_IPC);
     if (ret < 0) {
         printf("[demo] Failed to register IPC source.\n");
         return 1;
     }
-    printf("[demo] Registered IPC\n");
+    printf("[demo] Registered IPC (any sender)\n");
     printf("\n");
 
     /* Step 3: polling mode */
@@ -92,6 +93,14 @@ int main(int argc, char **argv)
     /* Step 6: report all triggered events */
     for (i = 0; i < n; i++) {
         printf("[demo] Event triggered: %s\n", event_name(&events[i]));
+        if (events[i].source_type == WS_SOURCE_IPC) {
+            int len = sys_sync_receive(events[i].source_id, ipc_buf, sizeof(ipc_buf));
+            if (len >= 0) {
+                printf("[demo] IPC received from pid %d: %s\n", events[i].source_id, ipc_buf);
+            } else {
+                printf("[demo] IPC receive failed for pid %d\n", events[i].source_id);
+            }
+        }
     }
 
     return 0;

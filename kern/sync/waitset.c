@@ -1,3 +1,7 @@
+#ifndef _KERN_
+#define _KERN_ 1
+#endif
+
 #include <kern/sync/waitset.h>
 #include <kern/lib/spinlock.h>
 #include <kern/lib/debug.h>
