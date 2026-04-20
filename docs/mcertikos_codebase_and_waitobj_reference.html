@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mCertiKOS Codebase and Multi-Object Wait (waitobj) — Extended Reference</title>
+  <style>
+    :root { --fg: #1a1a1a; --muted: #444; --border: #ccc; --codebg: #f4f4f5; --accent: #0b3d6b; }
+    body { font-family: "Segoe UI", system-ui, Georgia, serif; color: var(--fg); line-height: 1.55; max-width: 52rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+    h1 { font-size: 1.75rem; color: var(--accent); border-bottom: 2px solid var(--border); padding-bottom: .35em; }
+    h2 { font-size: 1.35rem; margin-top: 2.2rem; color: #111; }
+    h3 { font-size: 1.12rem; margin-top: 1.35rem; }
+    h4 { font-size: 1rem; margin-top: 1rem; font-weight: 600; }
+    p, li { font-size: 0.98rem; }
+    .muted { color: var(--muted); font-size: 0.92rem; }
+    nav.toc { background: #fafafa; border: 1px solid var(--border); padding: 1rem 1.25rem; margin: 1.5rem 0 2rem; }
+    nav.toc ol { margin: 0.35em 0 0 1.1em; padding: 0; }
+    nav.toc a { color: var(--accent); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    code { font-family: Consolas, "Ubuntu Mono", monospace; font-size: 0.88em; background: var(--codebg); padding: 0.12em 0.35em; border-radius: 3px; }
+    pre { font-family: Consolas, "Ubuntu Mono", monospace; font-size: 0.82rem; background: var(--codebg); border: 1px solid var(--border); padding: 0.9rem 1rem; overflow-x: auto; line-height: 1.4; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0; }
+    th, td { border: 1px solid var(--border); padding: 0.45em 0.55em; text-align: left; vertical-align: top; }
+    th { background: #eee; font-weight: 600; }
+    .file { font-family: Consolas, monospace; font-size: 0.85em; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+    aside.note { border-left: 4px solid var(--accent); padding: 0.5rem 0 0.5rem 1rem; margin: 1rem 0; background: #f8fafc; }
+    @media print { body { max-width: none; } nav.toc { break-inside: avoid; } h2 { break-after: avoid; } }
+  </style>
+</head>
+<body>
+
+<h1>mCertiKOS Codebase and Multi-Object Wait (<code>waitobj</code>)<br><span class="muted">Extended technical reference</span></h1>
+
+<p class="muted">This document describes the overall layout of the teaching kernel in this repository, how major subsystems cooperate, and an in-depth treatment of the <strong>multi-object wait</strong> (<code>waitobj</code>) implementation: data structures, the wait path, notification, timer and keyboard integration, system calls, and boot behavior. It is intended for reading in a browser or export to PDF via <em>Print → Save as PDF</em>.</p>
+
+<nav class="toc" id="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#sec-overview">Repository and architectural overview</a></li>
+    <li><a href="#sec-boot">Boot, initialization, and first user process</a></li>
+    <li><a href="#sec-thread">Threads, processes, and the scheduler</a></li>
+    <li><a href="#sec-trap">Traps, interrupts, and system calls</a></li>
+    <li><a href="#sec-waitobj-intro">Multi-object wait: purpose and design</a></li>
+    <li><a href="#sec-waitobj-structs">Data structures (<code>waitobj.h</code>)</a></li>
+    <li><a href="#sec-waitobj-init">Initialization and allocation (<code>waitobj.c</code>)</a></li>
+    <li><a href="#sec-waitobj-wait">The <code>waitobj_wait</code> function (detailed walkthrough)</a></li>
+    <li><a href="#sec-notify">Event notification and <code>thread_wakeup</code></a></li>
+    <li><a href="#sec-timer">Timer integration</a></li>
+    <li><a href="#sec-kbd">Keyboard and console integration</a></li>
+    <li><a href="#sec-syscall">System call layer (<code>TSyscall.c</code>, <code>TDispatch.c</code>)</a></li>
+    <li><a href="#sec-user">User program: <code>wait_demo</code></a></li>
+    <li><a href="#sec-end-to-end">End-to-end execution scenarios</a></li>
+    <li><a href="#sec-build">Build system and binaries embedded in the kernel</a></li>
+    <li><a href="#sec-kern-tree">Kernel directory tour (related subsystems)</a></li>
+    <li><a href="#sec-syscall-abi">System call ABI and trap frame</a></li>
+    <li><a href="#sec-wait-vs-ipc">Comparison: <code>waitobj</code> vs existing IPC sleep</a></li>
+    <li><a href="#sec-wait-line">Line-by-line reference: <code>waitobj_wait</code> loop</a></li>
+    <li><a href="#sec-files-index">Files touched for the wait-object feature</a></li>
+    <li><a href="#sec-troubleshooting">Troubleshooting and common misconceptions</a></li>
+  </ol>
+</nav>
+
+<!-- ========== 1 ========== -->
+<h2 id="sec-overview">1. Repository and architectural overview</h2>
+
+<p>The project is a <strong>32-bit x86</strong> teaching operating system (mCertiKOS / CertiKOS-style tree) written primarily in <strong>C</strong> with assembly entry points. Work is split between <strong>kernel space</strong> (<code>kern/</code>), <strong>user programs</strong> (<code>user/</code>), <strong>boot loaders</strong> (<code>boot/</code>), and top-level <strong>Makefiles</strong> that compile user ELFs, link them into the kernel as binary blobs, and produce a disk image for QEMU.</p>
+
+<h3>1.1 Top-level directories</h3>
+<table>
+  <thead><tr><th>Path</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td class="file">kern/</td><td>Kernel: devices, traps, threads, processes, virtual memory, file system, synchronization (<code>kern/sync/</code>), and initialization.</td></tr>
+    <tr><td class="file">user/</td><td>User-mode programs: <code>idle</code>, <code>shell</code>, <code>pingpong</code>, <code>wait_demo</code>, libraries, and syscall stubs.</td></tr>
+    <tr><td class="file">boot/</td><td>Boot stages that load the kernel.</td></tr>
+    <tr><td class="file">misc/</td><td>Scripts and utilities (mount, QEMU helpers, etc.).</td></tr>
+    <tr><td class="file">obj/</td><td>Build output (object files, linked <code>kern/kernel</code>, user binaries).</td></tr>
+    <tr><td class="file">docs/</td><td>Documentation including this HTML file.</td></tr>
+  </tbody>
+</table>
+
+<h3>1.2 Kernel subsystems (conceptual layering)</h3>
+<p>At a high level, execution flows from <strong>hardware</strong> (timer, keyboard, disk) through <strong>interrupt and trap handlers</strong>, optionally into <strong>device drivers</strong> and <strong>synchronization primitives</strong>, while <strong>user processes</strong> invoke the kernel via <strong>system calls</strong> (software interrupt). The scheduler chooses which user thread runs next based on ready queues and thread state (<code>TSTATE_READY</code>, <code>TSTATE_RUN</code>, <code>TSTATE_SLEEP</code>).</p>
+
+<pre>
+Hardware IRQ / exception
+       |
+       v
+  trap / interrupt handler (e.g. kern/trap/TTrapHandler/TTrapHandler.c)
+       |
+       +---> device logic (timer, keyboard, IDE, ...)
+       |
+       +---> may call thread_wakeup(chan) or advance global clocks
+
+User process
+       |
+       v
+  syscall (int 0x30) -> syscall_dispatch -> sys_* implementation
+       |
+       +---> may call thread_sleep(chan, lock) or waitobj_* internals
+</pre>
+
+<p>The <code>waitobj</code> module sits <strong>above</strong> the raw <code>thread_sleep</code>/<code>thread_wakeup</code> API: it packages “wait until one of several logical sources is ready” into a small hub (wait object) with a list of event sources, while reusing the existing scheduler sleep channel discipline.</p>
+
+<hr>
+
+<!-- ========== 2 ========== -->
+<h2 id="sec-boot">2. Boot, initialization, and first user process</h2>
+
+<h3>2.1 <code>kern_init</code> and <code>kern_main</code></h3>
+<p>Kernel entry eventually calls <code>kern_init</code> in <span class="file">kern/init/init.c</span>, which runs <code>thread_init</code> (thread queues, initial TCB state) and then <code>kern_main</code>. The original course layout created an <strong>idle</strong> user ELF and a <strong>shell</strong> ELF and switched the BSP directly into the shell. The demonstration-oriented change keeps <strong>idle</strong> (so there is always another runnable thread when the demo sleeps) but boots the foreground into <strong><code>wait_demo</code></strong> instead of the shell, so the console is not captured by shell line editing.</p>
+
+<p>The sequence in <code>kern_main</code> is approximately:</p>
+<ol>
+  <li><code>proc_create(idle binary)</code> — enqueues the idle process on the global ready queue.</li>
+  <li><code>proc_create(wait_demo binary)</code> — creates the demonstration process.</li>
+  <li><code>tqueue_remove(NUM_IDS, wait_demo_pid)</code> — removes the demo from the ready queue as part of the hand-crafted bootstrap (mirroring the prior shell bootstrap).</li>
+  <li>Mark <code>wait_demo</code> running, <code>set_curid</code>, <code>kctx_switch(0, wait_demo_pid)</code> — the BSP begins executing user code in <code>wait_demo</code>.</li>
+</ol>
+
+<aside class="note"><strong>Why idle must exist:</strong> <code>thread_sleep</code> in <span class="file">kern/thread/PThread/PThread.c</span> always dequeues the next ready thread. If no other thread were ready, the dequeue result would be invalid and the system would not run interrupt-driven wakeups correctly from a sane multi-thread context. Idle sits in a <code>yield</code> loop and consumes spare quanta.</aside>
+
+<h3>2.2 Early device and subsystem init</h3>
+<p><span class="file">kern/dev/devinit.c</span> runs during BSP bring-up: console, interrupts, traps, paging-related setup, file system caches, IDE, IPC, and <code>waitobj_init()</code>. That last call zeroes the wait-object and event-source pools and prepares spinlocks so the wait module is safe to use before any user program calls the new syscalls.</p>
+
+<hr>
+
+<!-- ========== 3 ========== -->
+<h2 id="sec-thread">3. Threads, processes, and the scheduler</h2>
+
+<h3>3.1 Processes and <code>proc_create</code></h3>
+<p><span class="file">kern/proc/PProc/PProc.c</span> defines <code>proc_create</code>: it allocates a user context via <code>thread_spawn</code> (which enqueues a new PID), loads the ELF image for that PID, fills the user trap frame (segments, stack at high virtual address, IF set), and returns the new process id. User programs are not loaded from a file system at runtime for the embedded demos; the linker embeds raw ELF bytes (<code>-b binary</code>) and the kernel references symbols such as <code>_binary___obj_user_wait_demo_wait_demo_start</code>.</p>
+
+<h3>3.2 <code>thread_sleep</code> and <code>thread_wakeup</code></h3>
+<p>The scheduler lock <code>sched_lk</code> protects ready-queue operations and sleep/wakeup invariants:</p>
+<ul>
+  <li><strong><code>thread_sleep(void *chan, spinlock_t *lk)</code>:</strong> Requires a non-NULL per-object lock <code>lk</code> (for <code>waitobj</code>, this is <code>&amp;wo-&gt;lk</code>). It acquires <code>sched_lk</code>, releases <code>lk</code> (so producers can acquire the object lock and signal), marks the current thread <code>TSTATE_SLEEP</code>, records <code>chan</code> in the TCB, dequeues the next ready thread, switches to it via <code>kctx_switch</code>, then on return clears the channel and re-acquires <code>lk</code>. The <code>chan</code> pointer is an opaque identity compared by pointer equality in <code>thread_wakeup</code>.</li>
+  <li><strong><code>thread_wakeup(void *chan)</code>:</strong> With <code>sched_lk</code> held, scans TCBs for threads sleeping on the same <code>chan</code>, marks them ready, clears their channel, and enqueues them. For wait objects, <code>chan == (void *)wo</code> where <code>wo</code> is the address of a <code>wait_object_t</code> in the static pool—unique per hub.</li>
+</ul>
+
+<p>The <code>waitobj</code> implementation deliberately does <strong>not</strong> modify the scheduler’s round-robin or time-slice policy; it only uses these primitives.</p>
+
+<hr>
+
+<!-- ========== 4 ========== -->
+<h2 id="sec-trap">4. Traps, interrupts, and system calls</h2>
+
+<h3>4.1 Interrupt dispatch</h3>
+<p><span class="file">kern/trap/TTrapHandler/TTrapHandler.c</span> implements <code>interrupt_handler</code> for IRQ lines. The timer line (<code>T_IRQ0 + IRQ_TIMER</code>) runs <code>timer_intr_handler</code>: end-of-interrupt, <code>sched_update()</code> (may preempt via <code>thread_yield</code> when the slice expires), then <code>waitobj_on_timer_irq()</code> which increments the global tick counter used for timer deadlines. The keyboard line (<code>T_IRQ0 + IRQ_KBD</code>) runs <code>keyboard_intr()</code> then EOI so the controller’s data port is read and the IRQ is acknowledged—important because previously a missing case could leave the keyboard path polling-only.</p>
+
+<h3>4.2 System call dispatch</h3>
+<p>User code loads the syscall number into <code>EAX</code> and arguments into <code>EBX</code>…<code>EDX</code> per <span class="file">kern/lib/syscall.h</span>. The trap handler routes to <code>syscall_dispatch</code> in <span class="file">kern/trap/TDispatch/TDispatch.c</span>, which switches on <code>SYS_*</code> constants and calls the corresponding <code>sys_*</code> function, passing the trap frame <code>tf_t *</code> for argument extraction and return value / errno injection.</p>
+
+<hr>
+
+<!-- ========== 5 ========== -->
+<h2 id="sec-waitobj-intro">5. Multi-object wait: purpose and design</h2>
+
+<p>Traditional “sleep on one condition variable” APIs require the programmer to fold multiple external events into one condition or to use multiple threads. A <strong>multi-object wait</strong> hub lets a <strong>single</strong> thread register several <strong>independent</strong> sources (here: periodic timer, keyboard activity, optional software pulse) and block until <strong>any</strong> becomes ready, then learn <strong>which</strong> source fired. This project constrains complexity by allowing <strong>one waiter per wait object</strong> (enforced by ownership checks on <code>owner_pid</code>).</p>
+
+<p>The implementation maps each wait object to:</p>
+<ul>
+  <li>A <strong>sleep channel</strong> equal to the wait object’s address (so <code>thread_wakeup(wo)</code> targets exactly the blocked waiter for that hub).</li>
+  <li>A <strong>spinlock</strong> embedded in the wait object, passed into <code>thread_sleep</code>, matching the pattern used elsewhere (e.g. IPC) where one must hold a lock across the “check condition then sleep” sequence to avoid missed wakeups—here the scheduler lock ordering is coordinated inside <code>thread_sleep</code>.</li>
+</ul>
+
+<hr>
+
+<!-- ========== 6 ========== -->
+<h2 id="sec-waitobj-structs">6. Data structures (<code>kern/sync/waitobj.h</code>)</h2>
+
+<h3>6.1 <code>event_source_t</code></h3>
+<table>
+  <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>Stable small integer returned to user space to identify which source satisfied a wait (derived from pool index).</td></tr>
+    <tr><td><code>type</code></td><td>One of <code>EVENT_TIMER</code>, <code>EVENT_KEYBOARD</code>, <code>EVENT_SOFTWARE</code>.</td></tr>
+    <tr><td><code>ready</code></td><td>Non-zero when the source has a pending completion for the waiter (set in <code>event_notify</code>, cleared when a wait is satisfied).</td></tr>
+    <tr><td><code>period_ms</code></td><td>For timers: interval in tick-milliseconds (aligned with <code>waitobj_ticks</code> increment rate from the timer IRQ).</td></tr>
+    <tr><td><code>next_fire_tick</code></td><td>Absolute tick value when the timer source should transition to ready (checked in <code>waitobj_timer_tick</code>).</td></tr>
+    <tr><td><code>parent</code></td><td>Back-pointer to the owning <code>wait_object_t</code> for <code>thread_wakeup(parent)</code>.</td></tr>
+    <tr><td><code>next</code></td><td>Intrusive singly linked list of sources attached to the same wait object.</td></tr>
+  </tbody>
+</table>
+
+<h3>6.2 <code>wait_object_t</code> (<code>struct wait_object</code>)</h3>
+<table>
+  <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>wid</code></td><td>Logical id (index in pool); informational.</td></tr>
+    <tr><td><code>owner_pid</code></td><td>Process that created the object; <code>waitobj_add</code> / <code>waitobj_wait</code> verify this to prevent cross-process misuse in the lab setup.</td></tr>
+    <tr><td><code>in_use</code></td><td>Whether this pool slot is allocated.</td></tr>
+    <tr><td><code>lk</code></td><td>Spinlock guarding the source list and coordination with <code>thread_sleep</code>.</td></tr>
+    <tr><td><code>sources</code></td><td>Head pointer of the intrusive list of <code>event_source_t</code>.</td></tr>
+  </tbody>
+</table>
+
+<p>Constants <code>MAX_WAIT_OBJECTS</code> and <code>MAX_EVENT_SOURCES</code> bound memory usage; there is no dynamic heap allocation for these structures in the kernel module.</p>
+
+<hr>
+
+<!-- ========== 7 ========== -->
+<h2 id="sec-waitobj-init">7. Initialization and allocation (<code>kern/sync/waitobj.c</code>)</h2>
+
+<h3>7.1 <code>waitobj_init</code></h3>
+<p>Initializes <code>waitobj_ticks</code> to zero, clears every slot in <code>wobjs[]</code> and <code>esrc[]</code>, sets <code>in_use</code> and <code>parent</code>/<code>id</code> fields to safe initial values, and calls <code>spinlock_init</code> on each wait object’s lock.</p>
+
+<h3>7.2 <code>waitobj_create</code></h3>
+<p>Scans for the first wait object with <code>in_use == 0</code>, marks it in use, assigns <code>owner_pid</code> to the caller’s PID, clears <code>sources</code>, and returns the slot index as <code>wid</code>. Returns <code>-1</code> if the pool is exhausted.</p>
+
+<h3>7.3 <code>waitobj_add</code></h3>
+<p>Validates <code>wid</code> and ownership, allocates a free <code>event_source_t</code> from the global pool (slots with <code>parent == NULL</code> and <code>id == 0</code>), assigns a monotonically meaningful <code>id</code>, sets <code>type</code> and <code>parent</code>, prepends to <code>wo-&gt;sources</code>, and for timers initializes <code>period_ms</code> and <code>next_fire_tick = waitobj_ticks + period_ms</code>. Keyboard sources do not use the tick fields for scheduling.</p>
+
+<h3>7.4 <code>alloc_source</code> and <code>get_wo</code></h3>
+<p>These are static helpers: <code>get_wo</code> bounds-checks <code>wid</code> and ensures the slot is in use; <code>alloc_source</code> linear-scans the event pool.</p>
+
+<hr>
+
+<!-- ========== 8 ========== -->
+<h2 id="sec-waitobj-wait">8. The <code>waitobj_wait</code> function (detailed walkthrough)</h2>
+
+<p>The function signature is:</p>
+<pre>int waitobj_wait(unsigned int owner_pid, int wid, unsigned int timeout_ms, int *out_src_id);</pre>
+
+<p>Return semantics:</p>
+<ul>
+  <li><strong>0</strong> — success; <code>*out_src_id</code> holds the source id that became ready.</li>
+  <li><strong>-1</strong> — wait timed out (only when <code>timeout_ms != 0</code>; the demo uses infinite wait with <code>0</code>).</li>
+  <li><strong>-2</strong> — invalid <code>wid</code> or wrong <code>owner_pid</code>.</li>
+</ul>
+
+<h3>8.1 Entry validation</h3>
+<p><code>get_wo(wid)</code> must succeed and <code>wo-&gt;owner_pid</code> must equal <code>owner_pid</code>. Otherwise the function returns <code>-2</code> <em>before</em> acquiring <code>wo-&gt;lk</em>, avoiding deadlock on a bogus handle.</p>
+
+<h3>8.2 Timeout bookkeeping</h3>
+<p><code>use_timeout</code> is true iff <code>timeout_ms != 0</code>. The deadline is <code>waitobj_ticks + timeout_ms</code>. Because <code>waitobj_ticks</code> advances in interrupt context, the comparison <code>waitobj_ticks &gt;= deadline</code> is evaluated while holding <code>wo-&gt;lk</code> inside the loop.</p>
+
+<h3>8.3 The central <code>for (;;)</code> loop</h3>
+<p>After <code>spinlock_acquire(&amp;wo-&gt;lk)</code>, the implementation repeatedly:</p>
+<ol>
+  <li><strong>Scan for readiness</strong> — <code>first_ready_source(wo, &amp;ready_src)</code> walks the intrusive list from <code>wo-&gt;sources</code> in list order and returns the first node with <code>ready != 0</code>. <em>Ordering note:</em> because new sources are prepended, the most recently added source appears first; if multiple sources could be simultaneously ready, which one is returned first is determined by this list order.</li>
+  <li><strong>If a ready source exists:</strong> clear that source’s <code>ready</code> flag, call <code>reschedule_all_timer_sources(wo)</code> (see below), release <code>wo-&gt;lk</code>, write <code>*out_src_id</code>, optionally log under <code>WAITOBJ_VERBOSE</code>, return 0.</li>
+  <li><strong>Else if timeout expired:</strong> release lock, set <code>*out_src_id</code> to <code>-1</code>, return <code>-1</code>.</li>
+  <li><strong>Else:</strong> no source is ready and the deadline has not passed — call <code>thread_sleep(wo, &amp;wo-&gt;lk)</code>. Per the contract of <code>thread_sleep</code>, this atomically releases <code>wo-&gt;lk</code> after acquiring the scheduler lock, puts the thread to sleep on channel <code>wo</code>, and re-acquires <code>wo-&gt;lk</code> before returning. The loop then re-evaluates readiness (possibly a spurious wakeup is harmless because the scan repeats).</li>
+</ol>
+
+<h3>8.4 <code>reschedule_all_timer_sources</code></h3>
+<p>After any successful delivery, this helper iterates all sources on the wait object; for each timer source it sets <code>ready = 0</code> and <code>next_fire_tick = waitobj_ticks + period_ms</code>. Rationale: if the keyboard path satisfied the wait, the timer’s previous deadline might lie in the past relative to the new “now”; without rescheduling, the next <code>waitobj_wait</code> could return immediately with a timer event or behave inconsistently. Resetting every timer source on the object makes each subsequent wait observe a <strong>full</strong> interval from the completion time of the prior wait.</p>
+
+<hr>
+
+<!-- ========== 9 ========== -->
+<h2 id="sec-notify">9. Event notification and <code>thread_wakeup</code></h2>
+
+<p><code>event_notify(event_source_t *src)</code> is the uniform entry for making a source ready:</p>
+<ul>
+  <li>Null-checks <code>src</code> and <code>src-&gt;parent</code>.</li>
+  <li>Sets <code>src-&gt;ready = 1</code>.</li>
+  <li>For timer sources, emits an unconditional <code>KERN_INFO</code> line (so demonstrations can correlate user-visible behavior with kernel log output even when verbose tracing is off).</li>
+  <li>Additional detailed lines are wrapped in <code>WAITOBJ_LOG</code> (compiled out unless <code>-DWAITOBJ_VERBOSE</code>).</li>
+  <li>Calls <code>thread_wakeup(src-&gt;parent)</code> — the parent pointer is the wait object address used as the sleep channel.</li>
+</ul>
+
+<p><code>waitobj_signal_source</code> validates that the source belongs to the caller, is of type <code>EVENT_SOFTWARE</code>, and then calls <code>event_notify</code> — useful for synthetic tests without hardware.</p>
+
+<hr>
+
+<!-- ========== 10 ========== -->
+<h2 id="sec-timer">10. Timer integration</h2>
+
+<p>The LAPIC timer interrupt path (via the generic IRQ timer vector handled in <code>timer_intr_handler</code>) calls <code>waitobj_on_timer_irq()</code>, which:</p>
+<ol>
+  <li>Increments <code>waitobj_ticks</code> once per interrupt tick.</li>
+  <li>Invokes <code>waitobj_timer_tick()</code>, which scans the global <code>esrc[]</code> pool for allocated timer sources (<code>parent != NULL</code>, <code>type == EVENT_TIMER</code>), skips sources already <code>ready</code>, and if <code>now &gt;= next_fire_tick</code> calls <code>event_notify(s)</code>.</li>
+</ol>
+
+<p>The numeric relationship between <code>waitobj_ticks</code> and real milliseconds is tied to how often the timer IRQ runs (see <code>LAPIC_TIMER_INTR_FREQ</code> in <span class="file">kern/dev/lapic.h</span> and the interaction with <code>sched_update</code>). The demonstration program uses <code>3000</code> as the timer argument interpreted in the same tick units as <code>waitobj_ticks</code> increments.</p>
+
+<hr>
+
+<!-- ========== 11 ========== -->
+<h2 id="sec-kbd">11. Keyboard and console integration</h2>
+
+<p>Keyboard hardware raises IRQ1. The handler drains the device through <code>keyboard_intr()</code>, which feeds bytes through <code>cons_intr(kbd_proc_data)</code>. <span class="file">kern/dev/console.c</span> holds <code>cons_lk</code> while pushing characters into the ring buffer, then releases the lock and calls <code>waitobj_console_input_notify()</code> <em>outside</em> the console lock to avoid lock-order hazards with scheduler locks inside <code>thread_wakeup</code>.</p>
+
+<p><code>waitobj_console_input_notify</code> scans for keyboard-type sources not already marked ready and invokes <code>event_notify</code>. This decouples “character arrived in the console buffer” from “user process called <code>read</code>” — the wait demo does not need a line editor to observe keypresses for wakeup purposes.</p>
+
+<hr>
+
+<!-- ========== 12 ========== -->
+<h2 id="sec-syscall">12. System call layer</h2>
+
+<p>Numbers live in <span class="file">kern/lib/syscall.h</span> (<code>SYS_waitobj_create</code>, <code>SYS_waitobj_add</code>, <code>SYS_waitobj_wait</code>, <code>SYS_waitobj_signal</code>). User stubs in <span class="file">user/include/syscall.h</span> marshal registers per the existing calling convention.</p>
+
+<p>Kernel-side, <span class="file">kern/trap/TSyscall/TSyscall.c</span> implements:</p>
+<ul>
+  <li><code>sys_waitobj_create</code> — uses <code>get_curid()</code>, maps failure to <code>E_MEM</code>, success returns wid in retval1.</li>
+  <li><code>sys_waitobj_add</code> — reads wid, type, arg_ms from the trap frame.</li>
+  <li><code>sys_waitobj_wait</code> — maps kernel <code>-2</code> to <code>E_INVAL_ID</code>, <code>-1</code> to <code>E_WAIT_TIMEOUT</code>, else success with source id in retval1.</li>
+  <li><code>sys_waitobj_signal</code> — software source signaling.</li>
+</ul>
+
+<hr>
+
+<!-- ========== 13 ========== -->
+<h2 id="sec-user">13. User program: <code>wait_demo</code></h2>
+
+<p><span class="file">user/wait_demo/wait_demo.c</span> performs a formal demonstration: prints an overview of the experiment, registers timer and keyboard sources on one wait object, then loops calling <code>sys_waitobj_wait</code> with infinite timeout and prints which source id returned, along with cumulative counts. It explains that keyboard input is not echoed to the display.</p>
+
+<hr>
+
+<!-- ========== 14 ========== -->
+<h2 id="sec-end-to-end">14. End-to-end execution scenarios</h2>
+
+<h3>14.1 Timer-only path</h3>
+<p>User calls <code>wait</code>; no source is ready; thread sleeps on <code>wo</code>. Timer IRQs advance <code>waitobj_ticks</code>; when a timer source’s deadline is reached, <code>event_notify</code> marks it ready and wakes the sleeper. The waiter reacquires <code>wo-&gt;lk</code>, observes readiness, clears state, reschedules timers, returns to user space with the timer source id.</p>
+
+<h3>14.2 Keyboard path</h3>
+<p>A key generates an IRQ; <code>keyboard_intr</code> pushes a character; <code>waitobj_console_input_notify</code> signals a keyboard source; <code>thread_wakeup</code> runs; the waiter returns with the keyboard source id.</p>
+
+<h3>14.3 Competition</h3>
+<p>If both become ready close together, <code>first_ready_source</code> determines which is returned first; <code>reschedule_all_timer_sources</code> then normalizes timer deadlines for the next iteration.</p>
+
+<hr>
+
+<!-- ========== 15 ========== -->
+<h2 id="sec-build">15. Build system and embedded binaries</h2>
+
+<p><span class="file">user/wait_demo/Makefile.inc</span> compiles the demo ELF and appends it to <code>KERN_BINFILES</code>. The top-level kernel link line includes these blobs so <code>proc_create</code> and <code>kern_main</code> can reference their start symbols. <span class="file">kern/sync/Makefile.inc</span> compiles <code>waitobj.c</code>; <span class="file">kern/Makefile.inc</span> includes the sync makefile.</p>
+
+<hr>
+
+<h2 id="sec-kern-tree">16. Kernel directory tour (related subsystems)</h2>
+
+<p>The kernel is organized into functional areas. The list below is not exhaustive but orients a reader who opens the tree for the first time.</p>
+
+<table>
+  <thead><tr><th>Directory</th><th>Typical contents</th></tr></thead>
+  <tbody>
+    <tr><td class="file">kern/init/</td><td>BSP entry, <code>kern_main</code>, AP bring-up hooks. Determines <strong>which user ELF runs first</strong>.</td></tr>
+    <tr><td class="file">kern/dev/</td><td>Drivers: console, keyboard, serial, LAPIC/IOAPIC, timer PIT setup, disk (IDE). Interrupt glue in <code>intr.c</code>.</td></tr>
+    <tr><td class="file">kern/trap/</td><td>Modular trap handling: <code>TTrapHandler</code> (exceptions + IRQ demux), <code>TDispatch</code> (syscall switch), <code>TSyscall</code> (syscall bodies), argument marshaling.</td></tr>
+    <tr><td class="file">kern/thread/</td><td>Scheduler queues (<code>PTQueue*</code>), TCB storage (<code>PTCB*</code>), context switch (<code>PKCtx*</code>), <code>PThread</code> (<code>thread_sleep</code>/<code>thread_wakeup</code>/<code>thread_yield</code>).</td></tr>
+    <tr><td class="file">kern/proc/</td><td><code>proc_create</code>, user context launch trampoline, integration with ELF loader.</td></tr>
+    <tr><td class="file">kern/vmm/</td><td>Paging and user address space helpers (<code>MPT*</code> modules); page faults and <code>alloc_page</code> paths interact with traps.</td></tr>
+    <tr><td class="file">kern/fs/</td><td>File system used by the shell and other programs; not required for the wait demo itself.</td></tr>
+    <tr><td class="file">kern/lib/</td><td>Shared headers (<code>syscall.h</code>, <code>trap.h</code>, <code>types.h</code>), IPC blocks, string utilities, debug macros.</td></tr>
+    <tr><td class="file">kern/sync/</td><td><strong><code>waitobj</code></strong> implementation (this feature).</td></tr>
+    <tr><td class="file">kern/pmm/</td><td>Physical memory / container allocation backing <code>alloc_page</code>-style APIs.</td></tr>
+  </tbody>
+</table>
+
+<p>Cross-cutting concerns: <strong>spinlocks</strong> (<span class="file">kern/lib/spinlock.c</span>) protect short critical sections; <strong>interrupt control</strong> (<code>intr_local_disable</code> / enable in some syscall paths) prevents re-entrancy where required. The wait object uses a <em>per-object</em> spinlock in user-visible critical sections coordinated with <code>thread_sleep</code>’s interaction with <code>sched_lk</code>.</p>
+
+<h2 id="sec-syscall-abi">17. System call ABI and trap frame</h2>
+
+<p>The comment block in <span class="file">kern/lib/syscall.h</span> documents the register convention:</p>
+<ul>
+  <li><strong>EAX</strong> — system call number (<code>SYS_*</code> enum value).</li>
+  <li><strong>EBX, ECX, EDX, ESI, EDI</strong> — up to five arguments (this project’s convention).</li>
+  <li><strong>EAX</strong> on return — errno (<code>E_SUCC</code> means success).</li>
+  <li><strong>EBX</strong> (and sometimes further registers) — primary and secondary return values.</li>
+</ul>
+
+<p>The trap handler captures the user CPU state into a <code>tf_t</code> structure on the kernel stack; <code>syscall_get_arg2(tf)</code> etc. read argument slots, and <code>syscall_set_errno(tf, …)</code> / <code>syscall_set_retval1(tf, …)</code> write results back into the frame that will be restored to user mode.</p>
+
+<p>For <code>SYS_waitobj_wait</code>, the second argument is the wait object id and the third is the timeout in milliseconds (<code>0</code> means no deadline—wait indefinitely until a source becomes ready).</p>
+
+<h2 id="sec-wait-vs-ipc">18. Comparison: <code>waitobj</code> vs existing IPC sleep</h2>
+
+<p>The codebase already used <code>thread_sleep</code> / <code>thread_wakeup</code> for synchronous message passing in <span class="file">kern/trap/TSyscall/TSyscall.c</span> (<code>sys_sync_send</code> / <code>sys_sync_recv</code>) with a <strong>global</strong> <code>msg_lock</code> and per-message condition semantics. The wait-object extension differs in several ways:</p>
+
+<table>
+  <thead><tr><th>Aspect</th><th>IPC message sleep</th><th><code>waitobj</code></th></tr></thead>
+  <tbody>
+    <tr><td>Channel identity</td><td>Addresses of fields inside <code>msgBlock[]</code></td><td>Address of a <code>wait_object_t</code> in the static pool</td></tr>
+    <tr><td>Lock paired with sleep</td><td>Global <code>msg_lock</code></td><td>Per wait object <code>wo-&gt;lk</code></td></tr>
+    <tr><td>Wake condition</td><td>Message queue state</td><td>OR of multiple <code>event_source_t.ready</code> flags updated from IRQs / syscalls</td></tr>
+    <tr><td>Return value</td><td>Bytes copied / errno</td><td>Source id discriminating which logical event fired</td></tr>
+  </tbody>
+</table>
+
+<p>Understanding the IPC pattern is a useful stepping stone: both patterns rely on the same scheduler primitives and the same rule that <code>thread_wakeup</code> must be callable while holding <code>sched_lk</code> (it acquires that lock internally).</p>
+
+<h2 id="sec-wait-line">19. Line-by-line reference: <code>waitobj_wait</code> loop</h2>
+
+<p>The following annotates the control flow in <span class="file">kern/sync/waitobj.c</span> as implemented in the repository (function <code>waitobj_wait</code>, roughly lines 163–201).</p>
+
+<ol>
+  <li><strong>Resolve <code>wo</code>:</strong> <code>get_wo(wid)</code> ensures the handle is in range and allocated. Compare <code>owner_pid</code> to the caller-supplied PID; mismatch returns <code>-2</code> to catch accidental cross-process use.</li>
+  <li><strong>Compute deadline:</strong> If <code>timeout_ms == 0</code>, <code>use_timeout</code> is false and the timeout branch is never taken—the waiter may block indefinitely until a source becomes ready.</li>
+  <li><strong>Acquire <code>wo-&gt;lk</code>:</strong> From this point until <code>thread_sleep</code> internally releases it, no other CPU (in SMP) or the same CPU in a re-entrant scenario should mutate the wait object’s source list without that lock—single-core lab machines still benefit from clear locking discipline.</li>
+  <li><strong>First ready scan:</strong> <code>first_ready_source</code> returns the first list element with <code>ready</code> set. If found:
+    <ul>
+      <li>Clear that source’s <code>ready</code> bit so the same completion is not delivered twice.</li>
+      <li>Call <code>reschedule_all_timer_sources(wo)</code> to normalize all timer deadlines from the current <code>waitobj_ticks</code>.</li>
+      <li>Release <code>wo-&gt;lk</code> before copying out the source id—caller does not hold the lock after return.</li>
+    </ul>
+  </li>
+  <li><strong>Timeout branch:</strong> If configured and <code>waitobj_ticks</code> has reached the deadline, release the lock and return <code>-1</code>.</li>
+  <li><strong>Sleep branch:</strong> <code>thread_sleep((void *)wo, &amp;wo-&gt;lk)</code> — the channel pointer equals the wait object address. When <code>event_notify</code> calls <code>thread_wakeup((void *)parent)</code>, sleeping threads whose recorded channel equals that address are moved to the ready queue.</li>
+  <li><strong>After wakeup:</strong> Control returns inside the infinite <code>for</code> loop while still holding <code>wo-&gt;lk</code> (re-acquired by <code>thread_sleep</code> per its contract). The loop repeats the readiness scan; typically a source is now ready.</li>
+</ol>
+
+<pre>
+// Conceptual pseudocode equivalent to the loop body
+lock(wo)
+for (;;) {
+    s = find_first_ready_source(wo)
+    if (s != NULL) {
+        s.ready = 0
+        reschedule_all_timers(wo)
+        unlock(wo)
+        *out = s.id
+        return SUCCESS
+    }
+    if (timeout_enabled &amp;&amp; now() &gt;= deadline) {
+        unlock(wo)
+        *out = -1
+        return TIMEOUT
+    }
+    thread_sleep(wo /* channel */, wo.lock)
+    // lock(wo) is held again here
+}
+</pre>
+
+<h2 id="sec-files-index">20. Files touched for the wait-object feature</h2>
+
+<p>For auditing or grading, this table lists integration points beyond the core module.</p>
+
+<table>
+  <thead><tr><th>File</th><th>Change class</th></tr></thead>
+  <tbody>
+    <tr><td class="file">kern/sync/waitobj.c</td><td>New logic: pools, wait, notify, timer tick, console notify, verbose macro.</td></tr>
+    <tr><td class="file">kern/sync/waitobj.h</td><td>Public structures and prototypes.</td></tr>
+    <tr><td class="file">kern/sync/Makefile.inc</td><td>Compile rule.</td></tr>
+    <tr><td class="file">kern/Makefile.inc</td><td>Include sync makefile.</td></tr>
+    <tr><td class="file">kern/dev/devinit.c</td><td>Call <code>waitobj_init()</code>.</td></tr>
+    <tr><td class="file">kern/dev/console.c</td><td>Invoke <code>waitobj_console_input_notify()</code> after releasing console lock.</td></tr>
+    <tr><td class="file">kern/lib/syscall.h</td><td>Syscall numbers and <code>E_WAIT_TIMEOUT</code>.</td></tr>
+    <tr><td class="file">kern/trap/TDispatch/TDispatch.c</td><td>Dispatch cases.</td></tr>
+    <tr><td class="file">kern/trap/TDispatch/import.h</td><td>Declarations.</td></tr>
+    <tr><td class="file">kern/trap/TSyscall/TSyscall.c</td><td><code>sys_waitobj_*</code> and <code>sys_spawn</code> elf_id 6.</td></tr>
+    <tr><td class="file">kern/trap/TTrapHandler/TTrapHandler.c</td><td>Timer IRQ hook; keyboard IRQ case.</td></tr>
+    <tr><td class="file">kern/init/init.c</td><td>Boot idle + <code>wait_demo</code> without shell.</td></tr>
+    <tr><td class="file">user/wait_demo/*</td><td>Demonstration program and makefile fragment.</td></tr>
+    <tr><td class="file">user/Makefile.inc</td><td>Include wait_demo build.</td></tr>
+    <tr><td class="file">user/include/syscall.h</td><td>User stubs.</td></tr>
+    <tr><td class="file">user/idle/idle.c</td><td>No longer spawns demo at boot (idle remains a secondary runnable thread).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="sec-troubleshooting">21. Troubleshooting and common misconceptions</h2>
+
+<ul>
+  <li><strong>“Timer never fires”</strong> — Ensure you are not generating continuous keyboard interrupts (each key schedules the keyboard source). After any keyboard completion, the next timer deadline is intentionally reset to a full <code>period_ms</code> from the completion tick.</li>
+  <li><strong>“Nothing runs if I remove idle”</strong> — A single user thread that sleeps must not be the only runnable entity; <code>thread_sleep</code> assumes another ready thread exists.</li>
+  <li><strong>“No echo when typing”</strong> — Expected without the shell; wakeups still occur if QEMU delivers keyboard IRQs to the guest.</li>
+  <li><strong>Verbose kernel traces</strong> — Define <code>WAITOBJ_VERBOSE</code> when compiling <code>waitobj.c</code> to restore detailed <code>KERN_INFO</code> lines for all wait steps.</li>
+</ul>
+
+<hr>
+
+<p class="muted"><strong>PDF export:</strong> Open this file in a browser and use Print → Save as PDF.</p>
+
+</body>
+</html>

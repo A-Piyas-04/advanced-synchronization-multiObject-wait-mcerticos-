@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Multi-Object Wait (waitobj) Implementation Summary</title>
+  <style>
+    body { font-family: Georgia, "Times New Roman", serif; max-width: 48em; margin: 2em auto; line-height: 1.45; color: #111; }
+    h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 0.25em; }
+    h2 { font-size: 1.25em; margin-top: 1.4em; }
+    h3 { font-size: 1.05em; margin-top: 1em; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.92em; margin: 0.8em 0; }
+    th, td { border: 1px solid #999; padding: 0.35em 0.5em; text-align: left; vertical-align: top; }
+    th { background: #f0f0f0; }
+    code, tt { font-family: Consolas, "Courier New", monospace; font-size: 0.9em; background: #f5f5f5; padding: 0 0.2em; }
+    pre { background: #f5f5f5; padding: 0.75em; overflow-x: auto; font-size: 0.85em; }
+    hr { margin: 2em 0; border: none; border-top: 1px solid #ccc; }
+    .meta { color: #444; margin-bottom: 2em; }
+    @media print { body { margin: 1cm; } h1 { page-break-after: avoid; } h2, h3 { page-break-after: avoid; } }
+  </style>
+</head>
+<body>
+
+<p class="meta"><strong>Document:</strong> Multi-Object Wait (waitobj) Implementation Summary<br>
+<strong>Project:</strong> mCertiKOS / OS teaching kernel<br>
+<strong>Date:</strong> April 2026</p>
+
+<h1>1. Objective</h1>
+<p>Implement a <strong>kernel-level</strong> multi-source wait so one thread can register <strong>timer</strong>, <strong>keyboard</strong>, and optional <strong>software</strong> sources on a <strong>wait object</strong>, block with <code>thread_sleep</code>, wake when <strong>any</strong> source becomes ready via <code>thread_wakeup</code>, and return <strong>which source</strong> fired. One waiter per wait object; static pools (no <code>kmalloc</code>).</p>
+
+<h1>2. Architecture (summary)</h1>
+<ul>
+  <li><strong>Wait object:</strong> source list, <code>spinlock_t lk</code>, <code>owner_pid</code>, used as the <strong>sleep channel</strong> (<code>thread_sleep(wo, &amp;wo-&gt;lk)</code>).</li>
+  <li><strong>Event source:</strong> <code>id</code>, <code>type</code>, <code>ready</code>, <code>parent</code>, <code>next</code>; timers add <code>period_ms</code>, <code>next_fire_tick</code>.</li>
+  <li><strong>Global tick:</strong> <code>waitobj_ticks</code> in <code>kern/sync/waitobj.c</code>, advanced from the timer IRQ path.</li>
+</ul>
+
+<h1>3. Important file locations</h1>
+<table>
+  <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>kern/sync/waitobj.h</code></td><td>Types, constants, API.</td></tr>
+    <tr><td><code>kern/sync/waitobj.c</code></td><td>Create/add/wait, <code>event_notify</code>, timer tick, console notify, <code>reschedule_all_timer_sources</code>.</td></tr>
+    <tr><td><code>kern/sync/Makefile.inc</code></td><td>Build rule for sync module.</td></tr>
+    <tr><td><code>kern/Makefile.inc</code></td><td>Includes <code>sync/Makefile.inc</code>.</td></tr>
+    <tr><td><code>kern/dev/devinit.c</code></td><td><code>waitobj_init()</code>.</td></tr>
+    <tr><td><code>kern/lib/syscall.h</code></td><td><code>SYS_waitobj_*</code>, <code>E_WAIT_TIMEOUT</code>.</td></tr>
+    <tr><td><code>kern/trap/TDispatch/TDispatch.c</code></td><td>Dispatch cases.</td></tr>
+    <tr><td><code>kern/trap/TDispatch/import.h</code></td><td><code>sys_waitobj_*</code> declarations.</td></tr>
+    <tr><td><code>kern/trap/TSyscall/TSyscall.c</code></td><td>Syscall implementations; <code>sys_spawn</code> elf_id 6 for <code>wait_demo</code>.</td></tr>
+    <tr><td><code>kern/trap/TTrapHandler/TTrapHandler.c</code></td><td><code>waitobj_on_timer_irq()</code>; IRQ keyboard branch.</td></tr>
+    <tr><td><code>kern/dev/console.c</code></td><td><code>waitobj_console_input_notify()</code> after input.</td></tr>
+    <tr><td><code>kern/init/init.c</code></td><td>Boot: idle + <code>wait_demo</code> (no shell).</td></tr>
+    <tr><td><code>user/wait_demo/wait_demo.c</code></td><td>Demonstration program.</td></tr>
+    <tr><td><code>user/wait_demo/Makefile.inc</code></td><td>User binary and <code>KERN_BINFILES</code>.</td></tr>
+    <tr><td><code>user/include/syscall.h</code></td><td>User syscall stubs.</td></tr>
+  </tbody>
+</table>
+
+<h1>4. System calls</h1>
+<table>
+  <thead><tr><th>Name</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><code>SYS_waitobj_create</code></td><td>Allocate wait object; return wid.</td></tr>
+    <tr><td><code>SYS_waitobj_add</code></td><td>Add source (timer period in ms in arg).</td></tr>
+    <tr><td><code>SYS_waitobj_wait</code></td><td>Block until ready or timeout; return source id.</td></tr>
+    <tr><td><code>SYS_waitobj_signal</code></td><td>Signal <code>EVENT_SOFTWARE</code> source.</td></tr>
+  </tbody>
+</table>
+
+<h1>5. Timer and keyboard integration</h1>
+<ul>
+  <li><strong>Timer:</strong> <code>timer_intr_handler</code> calls <code>waitobj_on_timer_irq()</code> (increment ticks, scan deadlines, <code>event_notify</code>). One unconditional <code>KERN_INFO</code> when a timer source fires.</li>
+  <li><strong>Keyboard:</strong> IRQ dispatches to <code>keyboard_intr()</code>; after console buffering, <code>waitobj_console_input_notify()</code>.</li>
+</ul>
+
+<h1>6. Boot note</h1>
+<p><code>kern/init/init.c</code> creates <strong>idle</strong> then <strong>wait_demo</strong> and switches to <code>wait_demo</code>, so when <code>wait_demo</code> sleeps in <code>waitobj_wait</code> the scheduler can run <strong>idle</strong> (required because <code>thread_sleep</code> dequeues another thread).</p>
+
+<h1>7. Build and PDF</h1>
+<p>Build: <code>make</code> from project root. Run: <code>make qemu</code> or <code>make qemu-nox</code>.</p>
+<p><strong>To save this page as PDF:</strong> open this HTML file in Chrome or Edge, press <strong>Ctrl+P</strong>, choose <strong>Save as PDF</strong> / <strong>Microsoft Print to PDF</strong>.</p>
+<p>Markdown source (same content, tables): <code>docs/Multi_Object_Wait_Implementation.md</code>. If <strong>pandoc</strong> is installed: <code>pandoc docs/Multi_Object_Wait_Implementation.md -o docs/Multi_Object_Wait_Implementation.pdf</code></p>
+
+<hr>
+<p style="font-size:0.9em;color:#555;">End of summary.</p>
+</body>
+</html>
