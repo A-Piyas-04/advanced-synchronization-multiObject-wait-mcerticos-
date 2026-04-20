@@ -2,18 +2,11 @@
 #include <lib/types.h>
 #include <lib/monitor.h>
 #include <thread/PThread/export.h>
-#include <thread/PTQueueInit/export.h>
-#include <thread/PTCBIntro/export.h>
-#include <thread/PCurID/export.h>
-#include <thread/PKCtxIntro/export.h>
-#include <proc/PProc/export.h>
 #include <dev/devinit.h>
 #include <pcpu/PCPUIntro/export.h>
-#include <pcpu/PCPUIntro/import.h>
 #include <lib/kstack.h>
 #include <lib/thread.h>
 #include <lib/x86.h>
-#include <kern/sync/waitset.h>
 
 /* Global definitions for kernel stacks (declared extern in kstack.h) */
 struct kstack bsp_kstack[NUM_CPUS];
@@ -30,9 +23,15 @@ static volatile int cpu_booted = 0;
 static volatile int all_ready = FALSE;
 static void kern_main_ap(void);
 
+/*
+ * Boot into wait_demo (no shell) so the tutorial owns the console.
+ * We still create idle first: when wait_demo blocks in waitobj_wait, the
+ * scheduler must dequeue another thread. With only one user process,
+ * tqueue_dequeue returns NUM_IDS and the system breaks (no input/timer wake).
+ * Idle runs while wait_demo sleeps; shell is not started here.
+ */
 extern uint8_t _binary___obj_user_idle_idle_start[];
-extern uint8_t _binary___obj_user_pingpong_ding_start[];
-extern uint8_t _binary___obj_user_shell_shell_start[];
+extern uint8_t _binary___obj_user_wait_demo_wait_demo_start[];
 
 static void
 kern_main (void)
@@ -63,14 +62,15 @@ kern_main (void)
     all_ready = TRUE;
     */
 
-    pid = proc_create (_binary___obj_user_idle_idle_start, 1000);
-    pid = proc_create (_binary___obj_user_shell_shell_start, 1000);
-    KERN_INFO("CPU%d: process shell %d is created.\n", cpu_idx, pid);
-    tqueue_remove (NUM_IDS, pid);
-    tcb_set_state (pid, TSTATE_RUN);
-    set_curid (pid);
-    kctx_switch (0, pid);
-    KERN_PANIC("kern_main_ap() should never reach here.\n");
+    (void)proc_create(_binary___obj_user_idle_idle_start, 1000);
+    pid = proc_create(_binary___obj_user_wait_demo_wait_demo_start, 1000);
+    KERN_INFO("CPU%d: idle + wait_demo (tutorial) process %d is created.\n",
+	      cpu_idx, pid);
+    tqueue_remove(NUM_IDS, pid);
+    tcb_set_state(pid, TSTATE_RUN);
+    set_curid(pid);
+    kctx_switch(0, pid);
+    KERN_PANIC("kern_main: returned after kctx_switch (should not happen).\n");
 }
 
 static void
@@ -92,7 +92,6 @@ void
 kern_init (uintptr_t mbi_addr)
 {
     thread_init(mbi_addr);
-    waitset_init();
 
     KERN_INFO("[BSP KERN] Kernel initialized.\n");
 

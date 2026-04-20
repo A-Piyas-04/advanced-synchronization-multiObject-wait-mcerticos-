@@ -7,6 +7,7 @@
 #include "console.h"
 #include "serial.h"
 #include "keyboard.h"
+#include <sync/waitobj.h>
 
 #define BUFLEN 1024
 static char linebuf[BUFLEN];
@@ -44,6 +45,7 @@ cons_intr(int (*proc)(void))
 	}
 
 	spinlock_release(&cons_lk);
+	waitobj_console_input_notify();
 }
 
 char

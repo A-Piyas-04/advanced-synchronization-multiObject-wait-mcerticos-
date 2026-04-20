@@ -7,6 +7,7 @@
 #include <lib/trap.h>
 #include <vmm/MPTInit/export.h>
 #include <lib/ipc.h>
+#include <sync/waitobj.h>
 
 #include "console.h"
 #include "mboot.h"
@@ -58,6 +59,8 @@ devinit (uintptr_t mbi_addr)
 	// Note: log_init() is called lazily in sys_open when first file is opened
         ipc_init();
 	KERN_INFO("[BSP KERN] IPC initialized\n");
+	waitobj_init();
+	KERN_INFO("[BSP KERN] waitobj initialized\n");
 }
 
 void

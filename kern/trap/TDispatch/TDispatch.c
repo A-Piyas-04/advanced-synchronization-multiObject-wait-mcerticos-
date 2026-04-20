@@ -147,15 +147,17 @@ void syscall_dispatch(tf_t *tf)
     sys_sigreturn(tf);
     break;
 
-  /** Waitset syscalls **/
-  case SYS_waitset_create:
-    sys_waitset_create(tf);
+  case SYS_waitobj_create:
+    sys_waitobj_create(tf);
     break;
-  case SYS_waitset_ctl:
-    sys_waitset_ctl(tf);
+  case SYS_waitobj_add:
+    sys_waitobj_add(tf);
     break;
-  case SYS_waitset_wait:
-    sys_waitset_wait(tf);
+  case SYS_waitobj_wait:
+    sys_waitobj_wait(tf);
+    break;
+  case SYS_waitobj_signal:
+    sys_waitobj_signal(tf);
     break;
 
   default:

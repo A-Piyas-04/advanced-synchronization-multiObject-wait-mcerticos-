@@ -65,10 +65,10 @@ enum __syscall_nr {
   SYS_pause,        /* wait for signal */
   SYS_sigreturn,    /* return from signal handler */
 
-  /* Waitset syscalls */
-  SYS_waitset_create,
-  SYS_waitset_ctl,
-  SYS_waitset_wait,
+  SYS_waitobj_create,
+  SYS_waitobj_add,
+  SYS_waitobj_wait,
+  SYS_waitobj_signal,
 
   MAX_SYSCALL_NR	/* XXX: always put it at the end of __syscall_nr */
 };
@@ -106,6 +106,7 @@ enum __error_nr {
 	E_BADF,          // bad file descriptor
 	E_INVAL_SIGNUM,  /* invalid signal number */
 	E_INVAL_HANDLER, /* invalid signal handler */
+	E_WAIT_TIMEOUT,  /* wait object wait timed out */
 	MAX_ERROR_NR	/* XXX: always put it at the end of __error_nr */
 };
 

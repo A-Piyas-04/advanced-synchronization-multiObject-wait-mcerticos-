@@ -15,6 +15,7 @@ include $(USER_DIR)/idle/Makefile.inc
 include $(USER_DIR)/pingpong/Makefile.inc
 include $(USER_DIR)/fstest/Makefile.inc
 include $(USER_DIR)/shell/Makefile.inc
+include $(USER_DIR)/wait_demo/Makefile.inc
 
 # Signal test program
 SIGNAL_TEST_SRC	:= $(USER_DIR)/signal_test.c
@@ -29,24 +30,8 @@ $(SIGNAL_TEST_BIN): $(USER_LIB_OBJ) $(SIGNAL_TEST_OBJ)
 	@echo + ld $@
 	$(V)$(LD) $(USER_LDFLAGS) -o $@ $^ $(GCC_LIBS)
 
-# Waitset demo program
-WAITSET_DEMO_SRC := $(USER_DIR)/waitset_demo.c
-WAITSET_DEMO_OBJ := $(USER_OBJDIR)/waitset_demo.o
-WAITSET_DEMO_BIN := $(USER_OBJDIR)/waitset_demo
-
-KERN_BINFILES += $(WAITSET_DEMO_BIN)
-
-$(WAITSET_DEMO_OBJ): $(WAITSET_DEMO_SRC)
-	@echo + cc $<
-	$(V)$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<
-
-$(WAITSET_DEMO_BIN): $(USER_LIB_OBJ) $(WAITSET_DEMO_OBJ)
-	@echo + ld $@
-	$(V)$(LD) $(USER_LDFLAGS) -o $@ $^ $(GCC_LIBS)
-
-user: lib idle pingpong fstest shell $(SIGNAL_TEST_BIN) $(WAITSET_DEMO_BIN)
+user: lib idle pingpong fstest shell wait_demo $(SIGNAL_TEST_BIN)
 	@echo All targets of user are done.
 
 install_user:
 	$(V)cp $(SIGNAL_TEST_BIN) $(OBJDIR)/user/
-	$(V)cp $(WAITSET_DEMO_BIN) $(OBJDIR)/user/

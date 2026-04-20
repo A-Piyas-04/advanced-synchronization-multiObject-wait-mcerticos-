@@ -6,6 +6,8 @@
 #include <lib/thread.h>
 #include <lib/pmap.h>
 #include <dev/intr.h>
+#include <dev/keyboard.h>
+#include <sync/waitobj.h>
 #include <pcpu/PCPUIntro/export.h>
 
 #include <vmm/MPTOp/export.h>
@@ -109,6 +111,14 @@ static int timer_intr_handler (void)
 {
     intr_eoi ();
     sched_update();
+    waitobj_on_timer_irq();
+    return 0;
+}
+
+static int kbd_intr_handler (void)
+{
+    keyboard_intr();
+    intr_eoi();
     return 0;
 }
 
@@ -138,6 +148,9 @@ void interrupt_handler (tf_t *tf)
           break;
       case T_IRQ0 + IRQ_TIMER:
           timer_intr_handler ();
+          break;
+      case T_IRQ0 + IRQ_KBD:
+          kbd_intr_handler ();
           break;
       // TODO: handle the disk interrupts here
       case T_IRQ0 + IRQ_IDE1:

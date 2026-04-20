@@ -20,7 +20,7 @@
 #include <kern/fs/params.h>
 #include <lib/ipc.h>
 #include <lib/monitor.h>
-#include <kern/sync/waitset.h>
+#include <sync/waitobj.h>
 
 #include "import.h"
 
@@ -41,10 +41,6 @@ void sys_sync_send(tf_t *tf){
    msgBlock[cur_pid].length = length;
    msg_enqueue(cur_pid);
    thread_wakeup(&msgBlock[cur_pid].send_cv);
-   
-   /* Notify Waitset */
-   waitset_notify_ipc(recv_pid, cur_pid);
-
    // cur_pid has not been read, block and wait for it
    while(msg_getBlockBySendID(cur_pid) != NUM_IDS){
       thread_sleep(&msgBlock[cur_pid].recv_cv, &msg_lock);
@@ -134,7 +130,7 @@ extern uint8_t _binary___obj_user_pingpong_pong_start[];
 extern uint8_t _binary___obj_user_pingpong_ding_start[];
 extern uint8_t _binary___obj_user_fstest_fstest_start[];
 extern uint8_t _binary___obj_user_shell_shell_start[];
-extern uint8_t _binary___obj_user_waitset_demo_start[];
+extern uint8_t _binary___obj_user_wait_demo_wait_demo_start[];
 /**
  * Spawns a new child process.
  * The user level library function sys_spawn (defined in user/include/syscall.h)
@@ -192,7 +188,7 @@ void sys_spawn(tf_t *tf)
   } else if (elf_id == 5) {
     elf_addr = _binary___obj_user_shell_shell_start;
   } else if (elf_id == 6) {
-    elf_addr = _binary___obj_user_waitset_demo_start;
+    elf_addr = _binary___obj_user_wait_demo_wait_demo_start;
   } else {
     syscall_set_errno(tf, E_INVAL_PID);
     syscall_set_retval1(tf, NUM_IDS);
@@ -307,35 +303,79 @@ void sys_ls(tf_t *tf)
   syscall_set_errno(tf, E_SUCC);
   syscall_set_retval1(tf, len);
 }
-
-void sys_cp(tf_t *tf)
-{
-  syscall_set_errno(tf, E_INVAL_CALLNR);
-  syscall_set_retval1(tf, -1);
-}
-
 void sys_pwd(tf_t *tf)
 {
-  syscall_set_errno(tf, E_INVAL_CALLNR);
-  syscall_set_retval1(tf, -1);
+    char arr[100][100];
+    int len = 0;
+    unsigned int poff;
+    struct inode* curi = (struct inode*)tcb_get_cwd(get_curid());
+    struct inode* parent;
+    struct dirent de;
+    unsigned int off;
+    unsigned int de_size = sizeof(struct dirent);
+    char* p = arr[len];
+
+    // Lazily initialize cwd to root if not set
+    if (curi == NULL) {
+        curi = inode_get(ROOTDEV, ROOTINO);
+        tcb_set_cwd(get_curid(), curi);
+    }
+
+    parent = dir_lookup(curi, "..", &poff);
+
+    while (parent->inum != curi->inum) {
+        for (off = 0; off < parent->size; off += de_size) {
+            if (inode_read(parent, (char *)&de, off, de_size) != de_size)
+                break;
+            if (de.inum == curi->inum) {
+                strncpy(arr[len], de.name, DIRSIZ);
+                arr[len][DIRSIZ] = 0;
+                len++;
+                break;
+            }
+        }
+        curi = parent;
+        parent = dir_lookup(curi, "..", &poff);
+    }
+
+    int i;
+    for (i = len - 1; i >= 0; i--) {
+        p += strnlen(arr[i], sizeof(arr[i]));
+        *p++ = '/';
+    }
+    *p = '\0';
+
+    pt_copyout(arr[0], get_curid(), syscall_get_arg1(tf), p - arr[0] + 1);
 }
+
 
 void sys_mv(tf_t *tf)
 {
-  syscall_set_errno(tf, E_INVAL_CALLNR);
-  syscall_set_retval1(tf, -1);
-}
-
-void sys_rm(tf_t *tf)
-{
-  syscall_set_errno(tf, E_INVAL_CALLNR);
-  syscall_set_retval1(tf, -1);
 }
 
 void sys_cat(tf_t *tf)
 {
-  syscall_set_errno(tf, E_INVAL_CALLNR);
-  syscall_set_retval1(tf, -1);
+}
+
+void sys_rm(tf_t *tf)
+{
+  int isRecursive;
+  int user_addr_path;
+  int length;
+  int cur_pid;
+  user_addr_path = syscall_get_arg2(tf);
+  length = syscall_get_arg3(tf);
+  isRecursive = syscall_get_arg4(tf);
+  cur_pid = get_curid();
+  length = length < PAGESIZE - 1? length: PAGESIZE - 1;
+  pt_copyin(cur_pid, user_addr_path, sys_buf[cur_pid], length);
+  sys_buf[cur_pid][length] = '\0'; // path
+  // TODO unfinished
+
+}
+
+void sys_cp(tf_t *tf)
+{
 }
 
 void sys_readline(tf_t *tf)
@@ -427,9 +467,6 @@ void sys_kill(tf_t *tf)
 
     // Set signal as pending
     tcb_add_pending_signal(pid, signum);
-    
-    /* Notify Waitset */
-    waitset_notify_signal(pid, signum);
 
     // Wake up process if it's sleeping
     if (tcb_is_sleeping(pid)) {
@@ -503,73 +540,78 @@ void sys_sigreturn(tf_t *tf)
     syscall_set_errno(tf, E_SUCC);
 }
 
-/* Waitset System Calls */
-
-void sys_waitset_create(tf_t *tf)
+void
+sys_waitobj_create(tf_t *tf)
 {
-    int wsid = waitset_create();
-    if (wsid < 0) {
-        syscall_set_errno(tf, E_MEM); /* Or appropriate error */
-        syscall_set_retval1(tf, -1);
-    } else {
-        syscall_set_errno(tf, E_SUCC);
-        syscall_set_retval1(tf, wsid);
-    }
+	int wid;
+	unsigned int cur = get_curid();
+
+	wid = waitobj_create(cur);
+	if (wid < 0) {
+		syscall_set_errno(tf, E_MEM);
+		syscall_set_retval1(tf, (unsigned int)-1);
+		return;
+	}
+	syscall_set_errno(tf, E_SUCC);
+	syscall_set_retval1(tf, (unsigned int)wid);
 }
 
-void sys_waitset_ctl(tf_t *tf)
+void
+sys_waitobj_add(tf_t *tf)
 {
-    int wsid = syscall_get_arg2(tf);
-    int op = syscall_get_arg3(tf);
-    int type = syscall_get_arg4(tf);
-    int id = syscall_get_arg5(tf);
-    int events = syscall_get_arg6(tf);
-    /* data is not supported via register passing, use NULL */
-    
-    if (waitset_ctl(wsid, op, type, id, events, NULL) < 0) {
-        syscall_set_errno(tf, E_INVAL_ID); /* Or generic error */
-        syscall_set_retval1(tf, -1);
-    } else {
-        syscall_set_errno(tf, E_SUCC);
-        syscall_set_retval1(tf, 0);
-    }
+	int wid, type, sid;
+	uint32_t arg_ms;
+	unsigned int cur = get_curid();
+
+	wid = (int)syscall_get_arg2(tf);
+	type = (int)syscall_get_arg3(tf);
+	arg_ms = syscall_get_arg4(tf);
+	sid = waitobj_add(cur, wid, type, arg_ms);
+	if (sid < 0) {
+		syscall_set_errno(tf, E_INVAL_ID);
+		syscall_set_retval1(tf, (unsigned int)-1);
+		return;
+	}
+	syscall_set_errno(tf, E_SUCC);
+	syscall_set_retval1(tf, (unsigned int)sid);
 }
 
-void sys_waitset_wait(tf_t *tf)
+void
+sys_waitobj_wait(tf_t *tf)
 {
-    int wsid = syscall_get_arg2(tf);
-    unsigned int events_uva = syscall_get_arg3(tf);
-    int maxevents = syscall_get_arg4(tf);
-    int timeout = syscall_get_arg5(tf);
-    
-    struct wait_event k_events[16];
-    int count, i;
-    int k_max = (maxevents > 16) ? 16 : maxevents;
-    
-    /* Validate user address range (simple check) */
-    if (events_uva < VM_USERLO || events_uva >= VM_USERHI) {
-        syscall_set_errno(tf, E_INVAL_ADDR);
-        syscall_set_retval1(tf, -1);
-        return;
-    }
-    
-    count = waitset_wait(wsid, k_events, k_max, timeout);
-    
-    if (count < 0) {
-        syscall_set_errno(tf, E_INVAL_ID);
-        syscall_set_retval1(tf, -1);
-        return;
-    }
-    
-    /* Copy events to user space */
-    if (count > 0) {
-        if (pt_copyout(k_events, get_curid(), events_uva, count * sizeof(struct wait_event)) != count * sizeof(struct wait_event)) {
-             syscall_set_errno(tf, E_MEM);
-             syscall_set_retval1(tf, -1);
-             return;
-        }
-    }
-    
-    syscall_set_errno(tf, E_SUCC);
-    syscall_set_retval1(tf, count);
+	int wid, rc;
+	unsigned int timeout_ms;
+	int out_sid;
+	unsigned int cur = get_curid();
+
+	wid = (int)syscall_get_arg2(tf);
+	timeout_ms = syscall_get_arg3(tf);
+	rc = waitobj_wait(cur, wid, timeout_ms, &out_sid);
+	if (rc == -2) {
+		syscall_set_errno(tf, E_INVAL_ID);
+		syscall_set_retval1(tf, (unsigned int)-1);
+		return;
+	}
+	if (rc < 0) {
+		syscall_set_errno(tf, E_WAIT_TIMEOUT);
+		syscall_set_retval1(tf, (unsigned int)-1);
+		return;
+	}
+	syscall_set_errno(tf, E_SUCC);
+	syscall_set_retval1(tf, (unsigned int)out_sid);
+}
+
+void
+sys_waitobj_signal(tf_t *tf)
+{
+	int sid, rc;
+	unsigned int cur = get_curid();
+
+	sid = (int)syscall_get_arg2(tf);
+	rc = waitobj_signal_source(cur, sid);
+	if (rc < 0) {
+		syscall_set_errno(tf, E_INVAL_ID);
+		return;
+	}
+	syscall_set_errno(tf, E_SUCC);
 }

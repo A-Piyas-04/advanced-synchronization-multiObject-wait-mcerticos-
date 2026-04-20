@@ -2,7 +2,6 @@
 #include <lib/seg.h>
 #include <lib/kstack.h>
 #include <lib/debug.h>
-#include <pcpu/PCPUIntro/export.h>
 #include "import.h"
 
 static bool pcpu_inited = FALSE;
@@ -38,3 +37,4 @@ pcpu_init(void)
     set_pcpu_boot_info(cpu_idx, TRUE);
     pcpu_init_cpu();
 }
+
